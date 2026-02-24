@@ -1,8 +1,8 @@
-# cdp-python-backend-template
+# ai-defra-search-knowledge
 
 This is work-in-progress. See [To Do List](./TODO.md)
 
-- [cdp-python-backend-template](#cdp-python-backend-template)
+- [ai-defra-search-knowledge](#ai-defra-search-knowledge)
   - [Requirements](#requirements)
     - [Python](#python)
     - [Linting and Formatting](#linting-and-formatting)
