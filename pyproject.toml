@@ -18,6 +18,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "debugpy==1.8.17",
     "pre-commit==4.2.0",
     "pytest==8.4.0",
     "pytest-asyncio==1.0.0",
