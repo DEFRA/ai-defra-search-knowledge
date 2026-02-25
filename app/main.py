@@ -37,8 +37,12 @@ app.include_router(example_router)
 
 
 def main() -> None:  # pragma: no cover
-    os.environ["HTTP_PROXY"] = str(config.http_proxy)
-    os.environ["HTTPS_PROXY"] = str(config.http_proxy)
+    if config.http_proxy:
+        os.environ["HTTP_PROXY"] = str(config.http_proxy)
+        os.environ["HTTPS_PROXY"] = str(config.http_proxy)
+    else:
+        os.environ.pop("HTTP_PROXY", None)
+        os.environ.pop("HTTPS_PROXY", None)
 
     uvicorn.run(
         "app.main:app",

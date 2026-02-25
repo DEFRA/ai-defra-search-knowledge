@@ -71,5 +71,5 @@ def test_main_no_proxy_in_config(mocker, monkeypatch):
 
     main_mod.main()
 
-    assert os.environ.get("HTTP_PROXY") == "None"
-    assert os.environ.get("HTTPS_PROXY") == "None"
+    assert os.environ.get("HTTP_PROXY") is None
+    assert os.environ.get("HTTPS_PROXY") is None
