@@ -5,6 +5,10 @@ ARG PORT_DEBUG=8086
 
 FROM defradigital/python-development:${PARENT_VERSION} AS development
 
+USER root
+RUN apt update && apt install -y curl && rm -rf /var/lib/apt/lists/*
+USER nonroot
+
 ENV PATH="/home/nonroot/.venv/bin:${PATH}"
 ENV LOG_CONFIG="logging-dev.json"
 
@@ -31,11 +35,6 @@ FROM defradigital/python:${PARENT_VERSION} AS production
 
 ENV PATH="/home/nonroot/.venv/bin:${PATH}"
 ENV LOG_CONFIG="logging.json"
-
-USER root
-
-RUN apt update && \
-    apt install -y curl
 
 USER nonroot
 
