@@ -26,7 +26,7 @@ def extract_all_certs():
             ) as tmp_file:
                 tmp_file.write(decoded_value)
                 certs[var_name] = tmp_file.name
-                logger.error("Wrote %s to %s", var_name, tmp_file.name)
+                logger.info("Wrote %s to %s", var_name, tmp_file.name)
     logger.info("Loaded %d custom certificates", len(certs))
     return certs
 
