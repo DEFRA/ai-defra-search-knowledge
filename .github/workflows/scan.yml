@@ -1,0 +1,69 @@
+on:
+  schedule:
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  sonarcloud:
+    name: SonarCloud Scan
+    if: ${{ github.event_name != 'schedule' && github.actor != 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.13
+          cache: 'pip'
+
+      - name: Test code and Create Test Coverage Reports
+        run: |
+          pipx install uv
+          uv sync --locked
+          mkdir -p coverage
+          chmod -R a+rw ./coverage
+          uv run task test
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v6.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  trivy-scan:
+    name: Trivy Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check for unpinned dependencies
+        run: |
+          chmod +x ./scripts/check-unpinned-dependencies.sh
+          ./scripts/check-unpinned-dependencies.sh
+
+      - name: Run Aqua Trivy scan
+        id: trivy-scan
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-ref: .
+          scan-type: repository
+          format: table
+          exit-code: 1
+          trivyignores: .trivyignore
+          severity: CRITICAL,HIGH,MEDIUM,LOW
+          limit-severities-for-sarif: true
+        continue-on-error: true
+        env:
+          TRIVY_INCLUDE_DEV_DEPS: "true"
+
+      - name: Fail if vulnerabilities found
+        if: ${{ steps.trivy-scan.outcome == 'failure' }}
+        run: exit 1
