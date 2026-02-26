@@ -12,8 +12,14 @@ on:
       - ready_for_review
 
 jobs:
+  security-scan:
+    name: Security Scanning
+    uses: ./.github/workflows/scan.yml
+    secrets: inherit
+
   pr-validator:
     name: Run Pull Request Checks
+    needs: security-scan
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
