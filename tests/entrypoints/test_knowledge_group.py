@@ -75,11 +75,12 @@ def test_create_knowledge_group_missing_user_id():
     assert response.status_code == 422
 
 
-def test_list_knowledge_groups():
+def test_list_knowledge_groups(mock_db):
     client = TestClient(app)
     response = client.get("/knowledge-groups", headers={"user-id": "user-123"})
     assert response.status_code == 200
     assert response.json() == []
+    mock_db["knowledgeGroups"].find.assert_called_once_with({"created_by": "user-123"})
 
 
 def test_list_knowledge_groups_missing_user_id():
