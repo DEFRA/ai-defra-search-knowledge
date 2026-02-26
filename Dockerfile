@@ -33,6 +33,10 @@ CMD [ "-m", "app.main" ]
 
 FROM defradigital/python:${PARENT_VERSION} AS production
 
+USER root
+RUN apt update && apt install -y curl && rm -rf /var/lib/apt/lists/*
+USER nonroot
+
 ENV PATH="/home/nonroot/.venv/bin:${PATH}"
 ENV LOG_CONFIG="logging.json"
 
