@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
+from pymongo.errors import DuplicateKeyError
 
 from app.common.mongo import get_db
 from app.main import app
@@ -66,6 +67,25 @@ def test_create_knowledge_group_with_description():
     assert response.json()["created_by"] == "user-456"
 
 
+def test_create_knowledge_group_with_information_asset_owner():
+    client = TestClient(app)
+    response = client.post(
+        "/knowledge-group",
+        json={
+            "name": "My Group",
+            "description": "Test desc",
+            "information_asset_owner": "Jane Smith",
+        },
+        headers={"user-id": "user-789"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "My Group"
+    assert data["description"] == "Test desc"
+    assert data["information_asset_owner"] == "Jane Smith"
+    assert data["created_by"] == "user-789"
+
+
 def test_create_knowledge_group_missing_user_id():
     client = TestClient(app)
     response = client.post(
@@ -73,6 +93,20 @@ def test_create_knowledge_group_missing_user_id():
         json={"name": "Test"},
     )
     assert response.status_code == 422
+
+
+def test_create_knowledge_group_duplicate_name(mock_db):
+    mock_db["knowledgeGroups"].insert_one = AsyncMock(
+        side_effect=DuplicateKeyError("duplicate")
+    )
+    client = TestClient(app)
+    response = client.post(
+        "/knowledge-group",
+        json={"name": "My Group"},
+        headers={"user-id": "user-123"},
+    )
+    assert response.status_code == 409
+    assert "already exists" in response.json()["detail"]
 
 
 def test_list_knowledge_groups(mock_db):

@@ -15,11 +15,24 @@ from app.knowledge_group.router import router as knowledge_group_router
 logger = getLogger(__name__)
 
 
+KNOWLEDGE_GROUPS_COLLECTION = "knowledgeGroups"
+
+
+async def ensure_knowledge_group_indexes(client):
+    db = client.get_database(config.mongo_database)
+    await db[KNOWLEDGE_GROUPS_COLLECTION].create_index(
+        [("created_by", 1), ("name", 1)],
+        unique=True,
+    )
+    logger.info("Knowledge group unique index (created_by, name) ensured")
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     # Startup
     client = await get_mongo_client()
     logger.info("MongoDB client connected")
+    await ensure_knowledge_group_indexes(client)
     yield
     # Shutdown
     if client:

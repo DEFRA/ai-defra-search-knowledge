@@ -3,7 +3,7 @@ name = "ai-defra-search-knowledge"
 version = "0.1.0"
 description = "ai-defra-search-knowledge"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 dependencies = [
     "asgi-logger==0.1.0",
     "aws-embedded-metrics==3.3.0",
@@ -41,7 +41,7 @@ packages = ["app"]
 [tool.coverage.run]
 branch = true
 include = ["app/*"]
-omit = ["tests/*"]
+omit = ["tests/*", "app/scripts/load_demo_knowledge_groups.py"]
 
 [tool.coverage.html]
 directory = "coverage/coverage_html"
@@ -52,6 +52,7 @@ output = "coverage/coverage.xml"
 [tool.taskipy.tasks]
 lint = "uv run ruff format ./app ./tests --check && uv run ruff check ./app ./tests"
 test = "uv run task lint && uv run coverage run -m pytest -vv && uv run coverage html && uv run coverage xml"
+load-demo-knowledge-groups = "uv run python -m app.scripts.load_demo_knowledge_groups"
 
 [tool.pytest]
 minversion = "7.0"
