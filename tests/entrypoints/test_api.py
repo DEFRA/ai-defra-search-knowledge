@@ -10,15 +10,20 @@ client = TestClient(app)
 
 def test_lifespan(mocker):
     mock_mongo_client = mocker.AsyncMock()
+    mock_db = mocker.MagicMock()
+    mock_collection = mocker.AsyncMock()
+    mock_db.__getitem__.return_value = mock_collection
+    mock_mongo_client.get_database = mocker.Mock(return_value=mock_db)
+
     mock_get_mongo = mocker.patch(
-        "app.main.get_mongo_client", return_value=mock_mongo_client
+        "app.main.get_mongo_client",
+        new=mocker.AsyncMock(return_value=mock_mongo_client),
     )
 
-    # Using TestClient as a context manager triggers lifespan startup/shutdown
     with TestClient(app):
-        mock_get_mongo.assert_called_once()  # Startup: connect called
+        mock_get_mongo.assert_called_once()
 
-    mock_mongo_client.close.assert_awaited_once()  # Shutdown: close called
+    mock_mongo_client.close.assert_awaited_once()
 
 
 def test_example():
