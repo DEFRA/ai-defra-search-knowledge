@@ -14,6 +14,21 @@ def mock_db():
         return_value=MagicMock(inserted_ids=["id1", "id2"])
     )
     docs_collection.update_many = AsyncMock(return_value=MagicMock(modified_count=2))
+    docs_collection.update_one = AsyncMock(
+        return_value=MagicMock(modified_count=1, matched_count=1)
+    )
+
+    def _find_one_side_effect(*args, **kwargs):
+        _filter = args[0] if args else kwargs.get("filter", {})
+        fname = _filter.get("file_name", "test-file.pdf")
+        return {
+            "_id": "507f1f77bcf86cd799439011",
+            "file_name": fname,
+            "knowledge_group_id": "kg-1",
+            "cdp_upload_id": _filter.get("cdp_upload_id", "upload-789"),
+        }
+
+    docs_collection.find_one = AsyncMock(side_effect=_find_one_side_effect)
 
     async def docs_cursor_empty():
         return
@@ -34,6 +49,10 @@ def override_db(mock_db, mocker):
     mock_client = MagicMock()
     mock_client.close = AsyncMock()
     mocker.patch("app.main.get_mongo_client", AsyncMock(return_value=mock_client))
+    mocker.patch(
+        "app.document.router.ingest_document",
+        AsyncMock(return_value=5),
+    )
 
     async def _get_db():
         return mock_db
@@ -115,14 +134,82 @@ def test_upload_callback_200(mock_db):
     client = TestClient(app)
     response = client.post(
         "/upload-callback/upload-789",
-        json={"uploadStatus": "ready", "s3Path": "uploads/789/"},
+        json={
+            "uploadStatus": "ready",
+            "metadata": {"reference": "ref-1", "customerId": "cust-1"},
+            "form": {
+                "file": {
+                    "fileId": "c17543b8-e440-4156-8df4-af62f40a7ac8",
+                    "filename": "test-file.pdf",
+                    "contentType": "application/pdf",
+                    "fileStatus": "complete",
+                    "contentLength": 102400,
+                }
+            },
+            "numberOfRejectedFiles": 0,
+        },
     )
     assert response.status_code == 200
-    mock_db._docs_collection.update_many.assert_called_once()
-    call_args = mock_db._docs_collection.update_many.call_args
-    assert call_args[0][0] == {"cdp_upload_id": "upload-789"}
+    mock_db._docs_collection.update_one.assert_called_once()
+    call_args = mock_db._docs_collection.update_one.call_args
+    assert call_args[0][0] == {
+        "cdp_upload_id": "upload-789",
+        "file_name": "test-file.pdf",
+    }
     assert call_args[0][1]["$set"]["status"] == "ready"
-    assert call_args[0][1]["$set"]["s3_path"] == "uploads/789/"
+    assert call_args[0][1]["$set"]["s3_path"] == "c17543b8-e440-4156-8df4-af62f40a7ac8"
+
+
+def test_upload_callback_multiple_files(mock_db):
+    client = TestClient(app)
+    response = client.post(
+        "/upload-callback/upload-789",
+        json={
+            "uploadStatus": "ready",
+            "form": {
+                "files": [
+                    {
+                        "fileId": "file-id-1",
+                        "filename": "doc1.pdf",
+                        "fileStatus": "complete",
+                    },
+                    {
+                        "fileId": "file-id-2",
+                        "filename": "doc2.pdf",
+                        "fileStatus": "complete",
+                    },
+                ]
+            },
+            "numberOfRejectedFiles": 0,
+        },
+    )
+    assert response.status_code == 200
+    assert mock_db._docs_collection.update_one.call_count == 2
+    calls = mock_db._docs_collection.update_one.call_args_list
+    assert calls[0][0][0] == {"cdp_upload_id": "upload-789", "file_name": "doc1.pdf"}
+    assert calls[0][0][1]["$set"]["s3_path"] == "file-id-1"
+    assert calls[1][0][0] == {"cdp_upload_id": "upload-789", "file_name": "doc2.pdf"}
+    assert calls[1][0][1]["$set"]["s3_path"] == "file-id-2"
+
+
+def test_upload_callback_ignores_incomplete(mock_db):
+    client = TestClient(app)
+    response = client.post(
+        "/upload-callback/upload-789",
+        json={
+            "uploadStatus": "ready",
+            "form": {
+                "file": {
+                    "fileId": "file-id-1",
+                    "filename": "doc.pdf",
+                    "fileStatus": "scanning",
+                }
+            },
+            "numberOfRejectedFiles": 0,
+        },
+    )
+    assert response.status_code == 200
+    mock_db._docs_collection.update_one.assert_not_called()
 
 
 def test_upload_callback_ignores_non_ready(mock_db):
@@ -132,4 +219,4 @@ def test_upload_callback_ignores_non_ready(mock_db):
         json={"uploadStatus": "scanning"},
     )
     assert response.status_code == 200
-    mock_db._docs_collection.update_many.assert_not_called()
+    mock_db._docs_collection.update_one.assert_not_called()
