@@ -117,3 +117,39 @@ async def test_ingest_document_skips_empty_text(mocker):
     vectors = insert_mock.call_args[0][0]
     assert len(vectors) == 1
     assert vectors[0][0] == "ok"
+
+
+@pytest.mark.asyncio
+async def test_ingest_document_filenotfound_both_paths(mocker):
+    mocker.patch(
+        "app.ingest.service.fetch_jsonl_from_s3",
+        side_effect=FileNotFoundError("not found"),
+    )
+
+    count = await ingest_document(
+        bucket="b",
+        s3_key="missing",
+        document_id="d",
+        knowledge_group_id="kg",
+        snapshot_id="s",
+    )
+
+    assert count == 0
+
+
+@pytest.mark.asyncio
+async def test_ingest_document_empty_jsonl(mocker):
+    mocker.patch(
+        "app.ingest.service.fetch_jsonl_from_s3",
+        return_value=b"",
+    )
+
+    count = await ingest_document(
+        bucket="b",
+        s3_key="empty.jsonl",
+        document_id="d",
+        knowledge_group_id="kg",
+        snapshot_id="s",
+    )
+
+    assert count == 0
