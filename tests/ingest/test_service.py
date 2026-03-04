@@ -1,5 +1,3 @@
-from unittest.mock import AsyncMock, MagicMock
-
 import pytest
 
 from app.ingest.service import _parse_jsonl_chunks, ingest_document
@@ -33,12 +31,14 @@ async def test_ingest_document_fetches_embeds_inserts(mocker):
         "app.ingest.service.fetch_jsonl_from_s3",
         return_value=jsonl_data,
     )
-    mocker.patch("app.common.bedrock.get_bedrock_client", return_value=MagicMock())
+    mocker.patch(
+        "app.common.bedrock.get_bedrock_client", return_value=mocker.MagicMock()
+    )
     mocker.patch(
         "app.common.bedrock.BedrockEmbeddingService.generate_embeddings",
         return_value=[0.1] * 1024,
     )
-    insert_mock = AsyncMock()
+    insert_mock = mocker.AsyncMock()
     mocker.patch("app.ingest.service.insert_vectors", insert_mock)
 
     count = await ingest_document(
@@ -65,12 +65,14 @@ async def test_ingest_document_tries_jsonl_suffix_on_not_found(mocker):
         "app.ingest.service.fetch_jsonl_from_s3",
         side_effect=[FileNotFoundError, b'{"text": "ok"}'],
     )
-    mocker.patch("app.common.bedrock.get_bedrock_client", return_value=MagicMock())
+    mocker.patch(
+        "app.common.bedrock.get_bedrock_client", return_value=mocker.MagicMock()
+    )
     mocker.patch(
         "app.common.bedrock.BedrockEmbeddingService.generate_embeddings",
         return_value=[0.1] * 1024,
     )
-    insert_mock = AsyncMock()
+    insert_mock = mocker.AsyncMock()
     mocker.patch("app.ingest.service.insert_vectors", insert_mock)
 
     count = await ingest_document(
@@ -93,12 +95,14 @@ async def test_ingest_document_skips_empty_text(mocker):
         "app.ingest.service.fetch_jsonl_from_s3",
         return_value=jsonl_data,
     )
-    mocker.patch("app.common.bedrock.get_bedrock_client", return_value=MagicMock())
+    mocker.patch(
+        "app.common.bedrock.get_bedrock_client", return_value=mocker.MagicMock()
+    )
     mocker.patch(
         "app.common.bedrock.BedrockEmbeddingService.generate_embeddings",
         return_value=[0.1] * 1024,
     )
-    insert_mock = AsyncMock()
+    insert_mock = mocker.AsyncMock()
     mocker.patch("app.ingest.service.insert_vectors", insert_mock)
 
     count = await ingest_document(

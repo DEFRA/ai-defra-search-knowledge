@@ -1,5 +1,3 @@
-from unittest.mock import AsyncMock, MagicMock
-
 import pytest
 from fastapi.testclient import TestClient
 
@@ -8,14 +6,16 @@ from app.main import app
 
 
 @pytest.fixture
-def mock_db():
-    docs_collection = MagicMock()
-    docs_collection.insert_many = AsyncMock(
-        return_value=MagicMock(inserted_ids=["id1", "id2"])
+def mock_db(mocker):
+    docs_collection = mocker.MagicMock()
+    docs_collection.insert_many = mocker.AsyncMock(
+        return_value=mocker.MagicMock(inserted_ids=["id1", "id2"])
     )
-    docs_collection.update_many = AsyncMock(return_value=MagicMock(modified_count=2))
-    docs_collection.update_one = AsyncMock(
-        return_value=MagicMock(modified_count=1, matched_count=1)
+    docs_collection.update_many = mocker.AsyncMock(
+        return_value=mocker.MagicMock(modified_count=2)
+    )
+    docs_collection.update_one = mocker.AsyncMock(
+        return_value=mocker.MagicMock(modified_count=1, matched_count=1)
     )
 
     def _find_one_side_effect(*args, **kwargs):
@@ -28,17 +28,17 @@ def mock_db():
             "cdp_upload_id": _filter.get("cdp_upload_id", "upload-789"),
         }
 
-    docs_collection.find_one = AsyncMock(side_effect=_find_one_side_effect)
+    docs_collection.find_one = mocker.AsyncMock(side_effect=_find_one_side_effect)
 
     async def docs_cursor_empty():
         return
         yield
 
-    docs_collection.find = MagicMock(return_value=docs_cursor_empty())
+    docs_collection.find = mocker.MagicMock(return_value=docs_cursor_empty())
 
-    mock = MagicMock()
+    mock = mocker.MagicMock()
     mock.__getitem__ = (
-        lambda _s, key: docs_collection if key == "documents" else MagicMock()
+        lambda _s, key: docs_collection if key == "documents" else mocker.MagicMock()
     )
     mock._docs_collection = docs_collection
     return mock
@@ -46,12 +46,14 @@ def mock_db():
 
 @pytest.fixture(autouse=True)
 def override_db(mock_db, mocker):
-    mock_client = MagicMock()
-    mock_client.close = AsyncMock()
-    mocker.patch("app.main.get_mongo_client", AsyncMock(return_value=mock_client))
+    mock_client = mocker.MagicMock()
+    mock_client.close = mocker.AsyncMock()
+    mocker.patch(
+        "app.main.get_mongo_client", mocker.AsyncMock(return_value=mock_client)
+    )
     mocker.patch(
         "app.document.router.ingest_document",
-        AsyncMock(return_value=5),
+        mocker.AsyncMock(return_value=5),
     )
 
     async def _get_db():
@@ -106,7 +108,7 @@ def test_get_upload_status_empty(mock_db):
     )
 
 
-def test_get_upload_status_with_docs(mock_db):
+def test_get_upload_status_with_docs(mock_db, mocker):
     async def cursor_with_doc():
         yield {
             "_id": "507f1f77bcf86cd799439011",
@@ -118,7 +120,7 @@ def test_get_upload_status_with_docs(mock_db):
             "created_at": None,
         }
 
-    mock_db._docs_collection.find = MagicMock(return_value=cursor_with_doc())
+    mock_db._docs_collection.find = mocker.MagicMock(return_value=cursor_with_doc())
 
     client = TestClient(app)
     response = client.get("/upload-status/upload-456")
@@ -220,3 +222,71 @@ def test_upload_callback_ignores_non_ready(mock_db):
     )
     assert response.status_code == 200
     mock_db._docs_collection.update_one.assert_not_called()
+
+
+def test_upload_callback_no_matching_doc(mock_db, mocker):
+    """When find_one returns None, callback skips and does not update."""
+    mock_db._docs_collection.find_one = mocker.AsyncMock(return_value=None)
+    client = TestClient(app)
+    response = client.post(
+        "/upload-callback/upload-789",
+        json={
+            "uploadStatus": "ready",
+            "form": {
+                "file": {
+                    "fileId": "file-id-1",
+                    "filename": "unknown.pdf",
+                    "fileStatus": "complete",
+                }
+            },
+            "numberOfRejectedFiles": 0,
+        },
+    )
+    assert response.status_code == 200
+    mock_db._docs_collection.update_one.assert_not_called()
+
+
+@pytest.mark.usefixtures("mock_db")
+def test_upload_callback_rejected_files():
+    """Callback logs when number_of_rejected_files > 0."""
+    client = TestClient(app)
+    response = client.post(
+        "/upload-callback/upload-789",
+        json={
+            "uploadStatus": "ready",
+            "form": {
+                "file": {
+                    "fileId": "file-id-1",
+                    "filename": "test-file.pdf",
+                    "fileStatus": "complete",
+                }
+            },
+            "numberOfRejectedFiles": 2,
+        },
+    )
+    assert response.status_code == 200
+
+
+@pytest.mark.usefixtures("mock_db")
+def test_upload_callback_ingest_exception(mocker):
+    """When ingest_document raises, callback still returns 200."""
+    mocker.patch(
+        "app.document.router.ingest_document",
+        mocker.AsyncMock(side_effect=RuntimeError("ingest failed")),
+    )
+    client = TestClient(app)
+    response = client.post(
+        "/upload-callback/upload-789",
+        json={
+            "uploadStatus": "ready",
+            "form": {
+                "file": {
+                    "fileId": "file-id-1",
+                    "filename": "test-file.pdf",
+                    "fileStatus": "complete",
+                }
+            },
+            "numberOfRejectedFiles": 0,
+        },
+    )
+    assert response.status_code == 200

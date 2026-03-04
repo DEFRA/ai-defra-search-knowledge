@@ -1,5 +1,3 @@
-from unittest.mock import AsyncMock, MagicMock
-
 import pytest
 from fastapi.testclient import TestClient
 from pymongo.errors import DuplicateKeyError
@@ -9,18 +7,18 @@ from app.main import app
 
 
 @pytest.fixture
-def mock_db():
-    mock = MagicMock()
-    mock_collection = MagicMock()
-    mock_collection.insert_one = AsyncMock(
-        return_value=MagicMock(inserted_id="507f1f77bcf86cd799439011")
+def mock_db(mocker):
+    mock = mocker.MagicMock()
+    mock_collection = mocker.MagicMock()
+    mock_collection.insert_one = mocker.AsyncMock(
+        return_value=mocker.MagicMock(inserted_id="507f1f77bcf86cd799439011")
     )
 
     async def empty_cursor():
         return
         yield  # makes it async generator
 
-    mock_collection.find = MagicMock(return_value=empty_cursor())
+    mock_collection.find = mocker.MagicMock(return_value=empty_cursor())
     mock.__getitem__ = lambda _s, _k: mock_collection
     return mock
 
@@ -28,9 +26,11 @@ def mock_db():
 @pytest.fixture(autouse=True)
 def override_db(mock_db, mocker):
     # Mock mongo client so lifespan doesn't connect to real MongoDB
-    mock_client = MagicMock()
-    mock_client.close = AsyncMock()
-    mocker.patch("app.main.get_mongo_client", AsyncMock(return_value=mock_client))
+    mock_client = mocker.MagicMock()
+    mock_client.close = mocker.AsyncMock()
+    mocker.patch(
+        "app.main.get_mongo_client", mocker.AsyncMock(return_value=mock_client)
+    )
 
     async def _get_db():
         return mock_db
@@ -95,8 +95,8 @@ def test_create_knowledge_group_missing_user_id():
     assert response.status_code == 422
 
 
-def test_create_knowledge_group_duplicate_name(mock_db):
-    mock_db["knowledgeGroups"].insert_one = AsyncMock(
+def test_create_knowledge_group_duplicate_name(mock_db, mocker):
+    mock_db["knowledgeGroups"].insert_one = mocker.AsyncMock(
         side_effect=DuplicateKeyError("duplicate")
     )
     client = TestClient(app)
