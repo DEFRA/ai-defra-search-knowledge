@@ -95,11 +95,7 @@ async def upload_callback(
         doc_filter = {"cdp_upload_id": upload_id, "file_name": file_info.filename}
         doc = await db[COLLECTION].find_one(doc_filter)
         if not doc:
-            logger.warning(
-                "No document matched for file %s in upload %s",
-                file_info.filename,
-                upload_id,
-            )
+            logger.warning("No document matched for file in upload")
             continue
 
         await db[COLLECTION].update_one(
@@ -120,29 +116,11 @@ async def upload_callback(
                 knowledge_group_id=knowledge_group_id,
                 snapshot_id=snapshot_id,
             )
-            logger.info(
-                "Ingested %d chunks for document %s (file %s)",
-                count,
-                document_id,
-                file_info.filename,
-            )
+            logger.info("Ingested %d chunks for document %s", count, document_id)
         except Exception:  # noqa: BLE001
-            logger.exception(
-                "Ingest failed for document %s (s3://%s/%s)",
-                document_id,
-                bucket,
-                s3_path,
-            )
+            logger.exception("Ingest failed for document %s", document_id)
 
     if body.number_of_rejected_files > 0:
-        logger.info(
-            "Upload %s had %d rejected files",
-            upload_id,
-            body.number_of_rejected_files,
-        )
+        logger.info("Upload had %d rejected files", body.number_of_rejected_files)
 
-    logger.info(
-        "Ingest started for upload %s: updated %d documents",
-        upload_id,
-        updated,
-    )
+    logger.info("Ingest started: updated %d documents", updated)
