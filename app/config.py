@@ -45,7 +45,9 @@ class AppConfig(BaseSettings):
 
     @property
     def upload_bucket_name(self) -> str:
-        base = self.knowledge_upload_bucket or "ai-defra-search-knowledge-upload"
+        if self.knowledge_upload_bucket is not None:
+            return self.knowledge_upload_bucket
+        base = "ai-defra-search-knowledge-upload"
         if self.python_env == "development" and not base.endswith("-local"):
             return f"{base}-local"
         return base
