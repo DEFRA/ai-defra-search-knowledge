@@ -59,9 +59,10 @@ async def create_documents(
         result = await db[COLLECTION].insert_many(docs)
         logger.info("Inserted %d documents", len(docs))
 
+        tasks = []
         for i, doc in enumerate(docs):
             document_id = str(result.inserted_ids[i])
-            asyncio.create_task(
+            task = asyncio.create_task(
                 _run_ingest_for_document(
                     document_id=document_id,
                     s3_key=doc["s3_key"],
@@ -69,6 +70,7 @@ async def create_documents(
                     cdp_upload_id=doc["cdp_upload_id"],
                 )
             )
+            tasks.append(task)
 
 
 @router.get("/upload-status/{upload_id}")
