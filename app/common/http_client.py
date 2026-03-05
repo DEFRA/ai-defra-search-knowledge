@@ -8,7 +8,7 @@ from app.config import config
 logger = getLogger(__name__)
 
 
-async def async_hook_request_tracing(request):
+def async_hook_request_tracing(request):
     trace_id = ctx_trace_id.get(None)
     if trace_id:
         request.headers[config.tracing_header] = trace_id

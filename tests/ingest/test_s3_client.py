@@ -1,0 +1,112 @@
+import pytest
+
+from app.ingest.s3_client import fetch_jsonl_from_s3, get_s3_client, list_jsonl_keys
+
+
+def test_get_s3_client_creates_client(mocker):
+    mock_client = mocker.MagicMock()
+    mocker.patch("app.ingest.s3_client.boto3.client", return_value=mock_client)
+    mocker.patch(
+        "app.ingest.s3_client.config", aws_region="eu-west-2", aws_endpoint_url=None
+    )
+
+    # Reset module-level cache
+    import app.ingest.s3_client as s3_module
+
+    s3_module._s3_client = None
+
+    result = get_s3_client()
+    assert result is mock_client
+
+
+def test_fetch_jsonl_from_s3_exact_key(mocker):
+    mock_body = mocker.MagicMock()
+    mock_body.read.return_value = b'{"text": "hello"}'
+    mock_client = mocker.MagicMock()
+    mock_client.get_object.return_value = {"Body": mock_body}
+    mocker.patch("app.ingest.s3_client.get_s3_client", return_value=mock_client)
+
+    result = fetch_jsonl_from_s3("bucket", "path/file.jsonl")
+    assert result == b'{"text": "hello"}'
+    mock_client.get_object.assert_called_once_with(
+        Bucket="bucket", Key="path/file.jsonl"
+    )
+
+
+def test_fetch_jsonl_from_s3_prefix_finds_jsonl(mocker):
+    mock_body = mocker.MagicMock()
+    mock_body.read.return_value = b'{"text": "ok"}'
+    mock_client = mocker.MagicMock()
+    mock_client.list_objects_v2.return_value = {
+        "Contents": [
+            {"Key": "path/other.txt"},
+            {"Key": "path/chunks.jsonl"},
+        ]
+    }
+    mock_client.get_object.return_value = {"Body": mock_body}
+    mocker.patch("app.ingest.s3_client.get_s3_client", return_value=mock_client)
+
+    result = fetch_jsonl_from_s3("bucket", "path/")
+    assert result == b'{"text": "ok"}'
+    mock_client.get_object.assert_called_once_with(
+        Bucket="bucket", Key="path/chunks.jsonl"
+    )
+
+
+def test_fetch_jsonl_from_s3_prefix_no_jsonl_raises(mocker):
+    mock_client = mocker.MagicMock()
+    mock_client.list_objects_v2.return_value = {"Contents": [{"Key": "path/other.txt"}]}
+    mocker.patch("app.ingest.s3_client.get_s3_client", return_value=mock_client)
+
+    with pytest.raises(FileNotFoundError, match="No .jsonl files"):
+        fetch_jsonl_from_s3("bucket", "path/")
+
+
+def test_fetch_jsonl_from_s3_prefix_empty_contents_raises(mocker):
+    mock_client = mocker.MagicMock()
+    mock_client.list_objects_v2.return_value = {"Contents": []}
+    mocker.patch("app.ingest.s3_client.get_s3_client", return_value=mock_client)
+
+    with pytest.raises(FileNotFoundError, match="No .jsonl files"):
+        fetch_jsonl_from_s3("bucket", "path/")
+
+
+def test_fetch_jsonl_from_s3_nosuchkey_raises(mocker):
+    from botocore.exceptions import ClientError
+
+    mock_client = mocker.MagicMock()
+    mock_client.get_object.side_effect = ClientError(
+        {"Error": {"Code": "NoSuchKey", "Message": "Not found"}}, "GetObject"
+    )
+    mocker.patch("app.ingest.s3_client.get_s3_client", return_value=mock_client)
+
+    with pytest.raises(FileNotFoundError, match="No object at"):
+        fetch_jsonl_from_s3("bucket", "missing.jsonl")
+
+
+def test_fetch_jsonl_from_s3_other_client_error_propagates(mocker):
+    from botocore.exceptions import ClientError
+
+    mock_client = mocker.MagicMock()
+    mock_client.get_object.side_effect = ClientError(
+        {"Error": {"Code": "AccessDenied", "Message": "Forbidden"}}, "GetObject"
+    )
+    mocker.patch("app.ingest.s3_client.get_s3_client", return_value=mock_client)
+
+    with pytest.raises(ClientError):
+        fetch_jsonl_from_s3("bucket", "file.jsonl")
+
+
+def test_list_jsonl_keys(mocker):
+    mock_client = mocker.MagicMock()
+    mock_client.list_objects_v2.return_value = {
+        "Contents": [
+            {"Key": "path/a.jsonl"},
+            {"Key": "path/b.txt"},
+            {"Key": "path/c.jsonl"},
+        ]
+    }
+    mocker.patch("app.ingest.s3_client.get_s3_client", return_value=mock_client)
+
+    result = list_jsonl_keys("bucket", "path/")
+    assert result == ["path/a.jsonl", "path/c.jsonl"]
