@@ -12,6 +12,7 @@ from app.document.router import router as document_router
 from app.example.router import router as example_router
 from app.health.router import router as health_router
 from app.knowledge_group.router import router as knowledge_group_router
+from app.rag.router import router as rag_router
 
 logger = getLogger(__name__)
 
@@ -59,6 +60,7 @@ app.include_router(health_router)
 app.include_router(example_router)
 app.include_router(knowledge_group_router)
 app.include_router(document_router)
+app.include_router(rag_router)
 
 
 def main() -> None:  # pragma: no cover
