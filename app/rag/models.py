@@ -19,3 +19,5 @@ class RagSearchResult(BaseModel):
     content: str
     similarity_score: float
     document_id: str
+    file_name: str = ""
+    s3_key: str = ""

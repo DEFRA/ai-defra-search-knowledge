@@ -15,7 +15,8 @@ from app.rag.vector_search import search_vectors
 router = APIRouter()
 logger = getLogger(__name__)
 
-COLLECTION = "knowledgeGroups"
+KNOWLEDGE_GROUPS_COLLECTION = "knowledgeGroups"
+DOCUMENTS_COLLECTION = "documents"
 
 
 @router.post(
@@ -43,7 +44,9 @@ async def search(
                 status_code=404,
                 detail=f"Knowledge group '{group_id}' not found",
             ) from None
-        doc = await db[COLLECTION].find_one({"_id": object_id, "created_by": user_id})
+        doc = await db[KNOWLEDGE_GROUPS_COLLECTION].find_one(
+            {"_id": object_id, "created_by": user_id}
+        )
         if doc is None:
             raise HTTPException(
                 status_code=404,
@@ -62,7 +65,7 @@ async def search(
             embedding_service.generate_embeddings, body.query
         )
     except Exception:
-        logger.error("Bedrock embedding generation failed for query: %s", body.query)
+        logger.error("Bedrock embedding generation failed")
         raise HTTPException(
             status_code=502,
             detail="Embedding generation failed",
@@ -83,14 +86,40 @@ async def search(
             status_code=502,
             detail="Vector search failed",
         ) from None
-    logger.info("Vector search returned %d result(s)", len(rows))
 
-    # Step 4: Serialise and return
+    # Step 4: Enrich results with document metadata from MongoDB
+    doc_map: dict[str, dict] = {}
+    if rows:
+        object_ids = []
+        for row in rows:
+            try:
+                object_ids.append(ObjectId(row["document_id"]))
+            except (InvalidId, TypeError):
+                logger.warning(
+                    "Skipping invalid document_id %s during enrichment",
+                    row["document_id"],
+                )
+        cursor = db[DOCUMENTS_COLLECTION].find(
+            {"_id": {"$in": object_ids}},
+            {"file_name": 1, "s3_key": 1},
+        )
+        async for doc in cursor:
+            doc_map[str(doc["_id"])] = doc
+        enriched_count = sum(1 for row in rows if row["document_id"] in doc_map)
+        logger.info(
+            "Enriched %d/%d result(s) with document metadata",
+            enriched_count,
+            len(rows),
+        )
+
+    # Step 5: Serialise and return
     return [
         RagSearchResult(
             content=row["content"],
             similarity_score=row["similarity_score"],
             document_id=row["document_id"],
+            file_name=doc_map.get(row["document_id"], {}).get("file_name", ""),
+            s3_key=doc_map.get(row["document_id"], {}).get("s3_key", ""),
         )
         for row in rows
     ]
