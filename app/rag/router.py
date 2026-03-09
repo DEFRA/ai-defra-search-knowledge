@@ -33,9 +33,7 @@ async def search(
                 status_code=404,
                 detail=f"Knowledge group '{group_id}' not found",
             )
-        doc = await db[COLLECTION].find_one(
-            {"_id": object_id, "created_by": user_id}
-        )
+        doc = await db[COLLECTION].find_one({"_id": object_id, "created_by": user_id})
         if doc is None:
             raise HTTPException(
                 status_code=404,
@@ -54,9 +52,7 @@ async def search(
             embedding_service.generate_embeddings, body.query
         )
     except Exception:
-        logger.error(
-            "Bedrock embedding generation failed for query: %s", body.query
-        )
+        logger.error("Bedrock embedding generation failed for query: %s", body.query)
         raise HTTPException(
             status_code=502,
             detail="Embedding generation failed",
@@ -65,7 +61,9 @@ async def search(
 
     # Step 3: Execute vector search in Postgres
     try:
-        rows = await search_vectors(embedding, body.knowledge_group_ids, body.max_results)
+        rows = await search_vectors(
+            embedding, body.knowledge_group_ids, body.max_results
+        )
     except Exception:
         logger.error(
             "Postgres vector search failed for knowledge_group_ids=%s",
