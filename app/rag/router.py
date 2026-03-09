@@ -18,7 +18,13 @@ logger = getLogger(__name__)
 COLLECTION = "knowledgeGroups"
 
 
-@router.post("/rag/search")
+@router.post(
+    "/rag/search",
+    responses={
+        404: {"description": "Knowledge group not found or not owned by the requesting user"},
+        502: {"description": "Upstream failure — Bedrock embedding or Postgres vector search"},
+    },
+)
 async def search(
     body: RagSearchRequest,
     user_id: Annotated[str, Header(..., alias="user-id")],
