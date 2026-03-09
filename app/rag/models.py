@@ -10,7 +10,8 @@ class RagSearchRequest(BaseModel):
     @classmethod
     def query_must_not_be_whitespace(cls, v: str) -> str:
         if not v.strip():
-            raise ValueError("query must not be empty or whitespace-only")
+            msg = "query must not be empty or whitespace-only"
+            raise ValueError(msg)
         return v
 
 

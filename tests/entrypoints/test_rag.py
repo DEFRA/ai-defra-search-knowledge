@@ -112,7 +112,7 @@ def test_search_returns_empty_list_when_no_vectors_exist(mocker):
 
 
 @pytest.mark.parametrize(
-    "payload,headers",
+    ("payload", "headers"),
     [
         (
             {"knowledge_group_ids": [GROUP_ID_A], "query": "flood"},

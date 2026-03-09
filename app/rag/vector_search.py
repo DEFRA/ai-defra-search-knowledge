@@ -26,13 +26,12 @@ async def search_vectors(
     Ordered by descending similarity_score (ascending cosine distance).
     Exceptions are propagated to the caller.
     """
-    async with get_connection() as conn:
-        async with conn.cursor() as cur:
-            await cur.execute(
-                _SEARCH_SQL,
-                (embedding, knowledge_group_ids, embedding, max_results),
-            )
-            rows = await cur.fetchall()
+    async with get_connection() as conn, conn.cursor() as cur:
+        await cur.execute(
+            _SEARCH_SQL,
+            (embedding, knowledge_group_ids, embedding, max_results),
+        )
+        rows = await cur.fetchall()
 
     results = [
         {

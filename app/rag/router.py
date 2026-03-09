@@ -32,7 +32,7 @@ async def search(
             raise HTTPException(
                 status_code=404,
                 detail=f"Knowledge group '{group_id}' not found",
-            )
+            ) from None
         doc = await db[COLLECTION].find_one({"_id": object_id, "created_by": user_id})
         if doc is None:
             raise HTTPException(
@@ -56,7 +56,7 @@ async def search(
         raise HTTPException(
             status_code=502,
             detail="Embedding generation failed",
-        )
+        ) from None
     logger.info("Bedrock embedding generated for query")
 
     # Step 3: Execute vector search in Postgres
@@ -72,7 +72,7 @@ async def search(
         raise HTTPException(
             status_code=502,
             detail="Vector search failed",
-        )
+        ) from None
     logger.info("Vector search returned %d result(s)", len(rows))
 
     # Step 4: Serialise and return
