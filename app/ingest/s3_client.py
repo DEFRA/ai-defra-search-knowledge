@@ -16,6 +16,19 @@ def get_s3_client() -> boto3.client:
     return _s3_client
 
 
+def fetch_object_from_s3(bucket: str, key: str) -> bytes:
+    """Fetch object from S3 at exact key."""
+    client = get_s3_client()
+    try:
+        resp = client.get_object(Bucket=bucket, Key=key)
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "NoSuchKey":
+            msg = f"No object at s3://{bucket}/{key}"
+            raise FileNotFoundError(msg) from e
+        raise
+    return resp["Body"].read()
+
+
 def fetch_jsonl_from_s3(bucket: str, key: str) -> bytes:
     """Fetch object from S3. Key can be a prefix (ends with /) or exact key."""
     client = get_s3_client()
@@ -28,14 +41,7 @@ def fetch_jsonl_from_s3(bucket: str, key: str) -> bytes:
             msg = f"No .jsonl files under s3://{bucket}/{key}"
             raise FileNotFoundError(msg)
         key = jsonl_keys[0]
-    try:
-        resp = client.get_object(Bucket=bucket, Key=key)
-    except ClientError as e:
-        if e.response["Error"]["Code"] == "NoSuchKey":
-            msg = f"No object at s3://{bucket}/{key}"
-            raise FileNotFoundError(msg) from e
-        raise
-    return resp["Body"].read()
+    return fetch_object_from_s3(bucket, key)
 
 
 def list_jsonl_keys(bucket: str, prefix: str) -> list[str]:

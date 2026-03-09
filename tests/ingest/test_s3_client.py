@@ -1,6 +1,38 @@
 import pytest
 
-from app.ingest.s3_client import fetch_jsonl_from_s3, get_s3_client, list_jsonl_keys
+from app.ingest.s3_client import (
+    fetch_jsonl_from_s3,
+    fetch_object_from_s3,
+    get_s3_client,
+    list_jsonl_keys,
+)
+
+
+def test_fetch_object_from_s3(mocker):
+    mock_body = mocker.MagicMock()
+    mock_body.read.return_value = b"raw bytes"
+    mock_client = mocker.MagicMock()
+    mock_client.get_object.return_value = {"Body": mock_body}
+    mocker.patch("app.ingest.s3_client.get_s3_client", return_value=mock_client)
+
+    result = fetch_object_from_s3("bucket", "path/to/object")
+    assert result == b"raw bytes"
+    mock_client.get_object.assert_called_once_with(
+        Bucket="bucket", Key="path/to/object"
+    )
+
+
+def test_fetch_object_from_s3_nosuchkey_raises(mocker):
+    from botocore.exceptions import ClientError
+
+    mock_client = mocker.MagicMock()
+    mock_client.get_object.side_effect = ClientError(
+        {"Error": {"Code": "NoSuchKey", "Message": "Not found"}}, "GetObject"
+    )
+    mocker.patch("app.ingest.s3_client.get_s3_client", return_value=mock_client)
+
+    with pytest.raises(FileNotFoundError, match="No object at"):
+        fetch_object_from_s3("bucket", "missing")
 
 
 def test_get_s3_client_creates_client(mocker):
