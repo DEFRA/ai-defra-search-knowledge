@@ -1,11 +1,12 @@
 import pytest
 
 from app.ingest.extractors import (
+    DocxChunkExtractor,
     JsonlChunkExtractor,
     PdfChunkExtractor,
     get_extractor_for_file_name,
 )
-from app.ingest.extractors.pdf import _chunk_text
+from app.ingest.extractors.chunking import chunk_text
 
 
 def test_get_extractor_for_file_name_pdf():
@@ -16,6 +17,11 @@ def test_get_extractor_for_file_name_pdf():
 def test_get_extractor_for_file_name_jsonl():
     assert isinstance(get_extractor_for_file_name("chunks.jsonl"), JsonlChunkExtractor)
     assert isinstance(get_extractor_for_file_name("data.JSONL"), JsonlChunkExtractor)
+
+
+def test_get_extractor_for_file_name_docx():
+    assert isinstance(get_extractor_for_file_name("doc.docx"), DocxChunkExtractor)
+    assert isinstance(get_extractor_for_file_name("report.DOCX"), DocxChunkExtractor)
 
 
 def test_get_extractor_for_file_name_unknown_defaults_to_jsonl():
@@ -44,18 +50,18 @@ def test_pdf_extractor_extracts_and_chunks(mocker):
 
 
 def test_chunk_text_empty():
-    assert _chunk_text("", 100, 10) == []
-    assert _chunk_text("   ", 100, 10) == []
+    assert chunk_text("", 100, 10) == []
+    assert chunk_text("   ", 100, 10) == []
 
 
 def test_chunk_text_short_fits_in_one():
     text = "Short text."
-    assert _chunk_text(text, 100, 10) == [text]
+    assert chunk_text(text, 100, 10) == [text]
 
 
 def test_chunk_text_splits_by_paragraph():
     text = "Para one.\n\nPara two.\n\nPara three."
-    chunks = _chunk_text(text, 15, 3)
+    chunks = chunk_text(text, 15, 3)
     assert len(chunks) >= 2
     assert "Para one" in chunks[0]
     assert "Para two" in chunks[1] or "Para two" in "".join(chunks)
@@ -64,14 +70,14 @@ def test_chunk_text_splits_by_paragraph():
 def test_chunk_text_hard_split_when_no_separator_works():
     long_word = "a" * 50
     text = long_word * 4
-    chunks = _chunk_text(text, 60, 10)
+    chunks = chunk_text(text, 60, 10)
     assert len(chunks) >= 2
     assert all(len(c) <= 70 for c in chunks)
 
 
 def test_chunk_text_splits_by_space():
     text = "word " * 30
-    chunks = _chunk_text(text.strip(), 50, 5)
+    chunks = chunk_text(text.strip(), 50, 5)
     assert len(chunks) >= 2
 
 
