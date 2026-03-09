@@ -19,7 +19,7 @@ async def ingest_document(
     snapshot_id: str,
 ) -> int:
     """
-    Fetch document from S3, extract chunks (JSONL or PDF), embed via Bedrock, insert into pgvector.
+    Fetch document from S3, extract chunks (JSONL, PDF, or DOCX), embed via Bedrock, insert into pgvector.
     Returns number of chunks ingested.
     """
     extractor = get_extractor_for_file_name(file_name)
@@ -42,7 +42,7 @@ async def ingest_document(
         try:
             data = await to_thread(fetch_object_from_s3, bucket, s3_key)
         except FileNotFoundError:
-            logger.error("PDF not found at s3://%s/%s", bucket, s3_key)
+            logger.error("Document not found at s3://%s/%s", bucket, s3_key)
             return 0
 
     chunks = extractor.extract(data, file_name)

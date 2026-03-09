@@ -219,3 +219,64 @@ async def test_ingest_document_pdf_filenotfound(mocker):
     )
 
     assert count == 0
+
+
+@pytest.mark.asyncio
+async def test_ingest_document_docx_fetches_embeds_inserts(mocker):
+    docx_bytes = b"PK\x03\x04"
+    mocker.patch(
+        "app.ingest.service.fetch_object_from_s3",
+        return_value=docx_bytes,
+    )
+    mock_doc = mocker.MagicMock()
+    mock_para = mocker.MagicMock()
+    mock_para.text = "DOCX content here."
+    mock_doc.paragraphs = [mock_para]
+    mocker.patch(
+        "app.ingest.extractors.docx.Document",
+        return_value=mock_doc,
+    )
+    mocker.patch(
+        "app.common.bedrock.get_bedrock_client", return_value=mocker.MagicMock()
+    )
+    mocker.patch(
+        "app.common.bedrock.BedrockEmbeddingService.generate_embeddings",
+        return_value=[0.1] * 1024,
+    )
+    insert_mock = mocker.AsyncMock()
+    mocker.patch("app.ingest.service.insert_vectors", insert_mock)
+
+    count = await ingest_document(
+        bucket="bucket",
+        s3_key="uploads/kg/doc",
+        file_name="report.docx",
+        document_id="doc-1",
+        knowledge_group_id="kg-1",
+        snapshot_id="snap-1",
+    )
+
+    assert count >= 1
+    insert_mock.assert_called_once()
+    vectors = insert_mock.call_args[0][0]
+    assert len(vectors) >= 1
+    assert "DOCX content" in vectors[0][0]
+    assert vectors[0][4]["source"] == "report.docx"
+
+
+@pytest.mark.asyncio
+async def test_ingest_document_docx_filenotfound(mocker):
+    mocker.patch(
+        "app.ingest.service.fetch_object_from_s3",
+        side_effect=FileNotFoundError("not found"),
+    )
+
+    count = await ingest_document(
+        bucket="b",
+        s3_key="missing",
+        file_name="report.docx",
+        document_id="d",
+        knowledge_group_id="kg",
+        snapshot_id="s",
+    )
+
+    assert count == 0
