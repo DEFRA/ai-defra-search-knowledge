@@ -19,7 +19,7 @@ async def ingest_document(
     snapshot_id: str,
 ) -> int:
     """
-    Fetch document from S3, extract chunks (JSONL, PDF, or DOCX), embed via Bedrock, insert into pgvector.
+    Fetch document from S3, extract chunks (JSONL, PDF, DOCX, or PPTX), embed via Bedrock, insert into pgvector.
     Returns number of chunks ingested.
     """
     extractor = get_extractor_for_file_name(file_name)
