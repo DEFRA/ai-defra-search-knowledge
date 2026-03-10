@@ -280,3 +280,69 @@ async def test_ingest_document_docx_filenotfound(mocker):
     )
 
     assert count == 0
+
+
+@pytest.mark.asyncio
+async def test_ingest_document_pptx_fetches_embeds_inserts(mocker):
+    pptx_bytes = b"PK\x03\x04"
+    mocker.patch(
+        "app.ingest.service.fetch_object_from_s3",
+        return_value=pptx_bytes,
+    )
+    mock_slide = mocker.MagicMock()
+    mock_shape = mocker.MagicMock()
+    mock_shape.has_text_frame = True
+    mock_shape.has_table = False
+    mock_shape.text = "PPTX slide content."
+    mock_slide.shapes = [mock_shape]
+    mock_slide.has_notes_slide = False
+    mock_prs = mocker.MagicMock()
+    mock_prs.slides = [mock_slide]
+    mocker.patch(
+        "app.ingest.extractors.pptx.Presentation",
+        return_value=mock_prs,
+    )
+    mocker.patch(
+        "app.common.bedrock.get_bedrock_client", return_value=mocker.MagicMock()
+    )
+    mocker.patch(
+        "app.common.bedrock.BedrockEmbeddingService.generate_embeddings",
+        return_value=[0.1] * 1024,
+    )
+    insert_mock = mocker.AsyncMock()
+    mocker.patch("app.ingest.service.insert_vectors", insert_mock)
+
+    count = await ingest_document(
+        bucket="bucket",
+        s3_key="uploads/kg/doc",
+        file_name="deck.pptx",
+        document_id="doc-1",
+        knowledge_group_id="kg-1",
+        snapshot_id="snap-1",
+    )
+
+    assert count >= 1
+    insert_mock.assert_called_once()
+    vectors = insert_mock.call_args[0][0]
+    assert len(vectors) >= 1
+    assert "PPTX slide content" in vectors[0][0]
+    assert vectors[0][4]["source"] == "deck.pptx"
+
+
+@pytest.mark.asyncio
+async def test_ingest_document_pptx_filenotfound(mocker):
+    mocker.patch(
+        "app.ingest.service.fetch_object_from_s3",
+        side_effect=FileNotFoundError("not found"),
+    )
+
+    count = await ingest_document(
+        bucket="b",
+        s3_key="missing",
+        file_name="deck.pptx",
+        document_id="d",
+        knowledge_group_id="kg",
+        snapshot_id="s",
+    )
+
+    assert count == 0
