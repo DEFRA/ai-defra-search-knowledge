@@ -6,10 +6,10 @@ class PostgresConfig(BaseSettings):
     model_config = SettingsConfigDict()
     host: str = Field(default="postgres", alias="POSTGRES_HOST")
     port: int = Field(5432, alias="POSTGRES_PORT")
-    database: str = Field(default="ai_defra_search_data", alias="POSTGRES_DB")
-    user: str = Field(default="postgres", alias="POSTGRES_USER")
+    database: str = Field(default="ai_defra_search_knowledge", alias="POSTGRES_DB")
+    user: str = Field(default="ai_defra_search_knowledge", alias="POSTGRES_USER")
     password: str | None = Field(default=None, alias="POSTGRES_PASSWORD")
-    ssl_mode: str = Field(default="disable", alias="POSTGRES_SSL_MODE")
+    ssl_mode: str = Field(default="require", alias="POSTGRES_SSL_MODE")
 
 
 class BedrockEmbeddingConfig(BaseSettings):
