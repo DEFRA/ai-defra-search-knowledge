@@ -18,3 +18,4 @@ class Document(BaseModel):
     cdp_upload_id: str
     s3_key: str
     created_at: datetime | None = None
+    chunk_count: int | None = None

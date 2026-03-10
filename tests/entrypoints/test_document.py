@@ -244,6 +244,7 @@ def test_list_documents_by_knowledge_group_success(mock_db, mocker):
             "cdp_upload_id": "upload-1",
             "s3_key": "uploads/kg/doc",
             "created_at": None,
+            "chunk_count": 12,
         }
 
     mock_db.__getitem__ = lambda _s, key: (
@@ -269,6 +270,7 @@ def test_list_documents_by_knowledge_group_success(mock_db, mocker):
     assert len(data) == 1
     assert data[0]["file_name"] == "guide.pdf"
     assert data[0]["status"] == "ready"
+    assert data[0]["chunk_count"] == 12
 
 
 def test_get_upload_status_with_docs(mock_db, mocker):
