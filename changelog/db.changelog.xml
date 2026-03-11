@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <!-- ai-defra-search-knowledge uses ai_defra_search_data DB and knowledge_vectors table (created by ai-defra-search-data migrator).
+         This changelog provides a baseline for future knowledge-specific schema changes. -->
+    <changeSet author="DEFRA" id="knowledge-1.0.0-baseline">
+        <tagDatabase tag="knowledge-v1.0.0"/>
+    </changeSet>
+</databaseChangeLog>
