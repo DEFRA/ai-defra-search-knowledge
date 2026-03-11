@@ -1,18 +1,20 @@
 from logging import getLogger
 
+from sqlalchemy import text
+
 from app.ingest.vector_store import get_connection
 
 logger = getLogger(__name__)
 
-_SEARCH_SQL = """
+_SEARCH_SQL = text("""
 SELECT content,
        source_id AS document_id,
-       1.0 - (embedding <=> %s::vector) AS similarity_score
+       1.0 - (embedding <=> :embedding::vector) AS similarity_score
 FROM knowledge_vectors
-WHERE metadata->>'knowledge_group_id' = ANY(%s)
-ORDER BY embedding <=> %s::vector ASC
-LIMIT %s
-"""
+WHERE metadata->>'knowledge_group_id' = ANY(:knowledge_group_ids)
+ORDER BY embedding <=> :embedding2::vector ASC
+LIMIT :max_results
+""")
 
 
 async def search_vectors(
@@ -26,12 +28,17 @@ async def search_vectors(
     Ordered by descending similarity_score (ascending cosine distance).
     Exceptions are propagated to the caller.
     """
-    async with get_connection() as conn, conn.cursor() as cur:
-        await cur.execute(
+    async with get_connection() as conn:
+        result = await conn.execute(
             _SEARCH_SQL,
-            (embedding, knowledge_group_ids, embedding, max_results),
+            {
+                "embedding": embedding,
+                "knowledge_group_ids": knowledge_group_ids,
+                "embedding2": embedding,
+                "max_results": max_results,
+            },
         )
-        rows = await cur.fetchall()
+        rows = result.fetchall()
 
     results = [
         {
