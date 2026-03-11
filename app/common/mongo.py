@@ -1,4 +1,5 @@
 from logging import getLogger
+from typing import Annotated
 
 from fastapi import Depends
 from pymongo import AsyncMongoClient
@@ -34,7 +35,9 @@ async def get_mongo_client() -> AsyncMongoClient:
     return client
 
 
-def get_db(client: AsyncMongoClient = Depends(get_mongo_client)) -> AsyncDatabase:
+def get_db(
+    client: Annotated[AsyncMongoClient, Depends(get_mongo_client)],
+) -> AsyncDatabase:
     global db
     if db is None:
         db = client.get_database(config.mongo_database)
