@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <!-- Idempotent so it works standalone or when data migrator ran first. -->
+    <changeSet author="DEFRA" id="knowledge-1.0.0-vector-extension">
+        <sql>CREATE EXTENSION IF NOT EXISTS vector</sql>
+        <rollback>DROP EXTENSION IF EXISTS vector</rollback>
+    </changeSet>
+
+    <changeSet author="DEFRA" id="knowledge-1.0.0-knowledge-vectors-table">
+        <sql>
+            CREATE TABLE IF NOT EXISTS knowledge_vectors (
+                id SERIAL PRIMARY KEY,
+                content TEXT NOT NULL,
+                embedding vector(1024) NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                snapshot_id VARCHAR(512),
+                source_id VARCHAR(512),
+                metadata JSONB
+            )
+        </sql>
+        <rollback>DROP TABLE IF EXISTS knowledge_vectors</rollback>
+    </changeSet>
+
+    <changeSet author="DEFRA" id="knowledge-1.0.0-hnsw-index">
+        <sql>
+            CREATE INDEX IF NOT EXISTS knowledge_vectors_embedding_idx
+            ON knowledge_vectors USING hnsw (embedding vector_cosine_ops)
+        </sql>
+        <rollback>DROP INDEX IF EXISTS knowledge_vectors_embedding_idx</rollback>
+    </changeSet>
+</databaseChangeLog>
