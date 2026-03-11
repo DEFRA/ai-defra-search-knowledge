@@ -10,6 +10,7 @@ class PostgresConfig(BaseSettings):
     user: str = Field(default="ai_defra_search_knowledge", alias="POSTGRES_USER")
     password: str | None = Field(default=None, alias="POSTGRES_PASSWORD")
     ssl_mode: str = Field(default="require", alias="POSTGRES_SSL_MODE")
+    rds_truststore: str | None = Field(default=None, alias="TRUSTSTORE_RDS_ROOT_CA")
 
 
 class BedrockEmbeddingConfig(BaseSettings):

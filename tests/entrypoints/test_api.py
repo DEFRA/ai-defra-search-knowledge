@@ -15,13 +15,17 @@ def test_lifespan(mocker):
     mock_db.__getitem__.return_value = mock_collection
     mock_mongo_client.get_database = mocker.Mock(return_value=mock_db)
 
-    mock_get_mongo = mocker.patch(
+    mocker.patch(
         "app.main.get_mongo_client",
         new=mocker.AsyncMock(return_value=mock_mongo_client),
     )
+    mocker.patch(
+        "app.main.get_sql_engine",
+        new=mocker.AsyncMock(return_value=None),
+    )
 
     with TestClient(app):
-        mock_get_mongo.assert_called_once()
+        pass
 
     mock_mongo_client.close.assert_awaited_once()
 

@@ -6,11 +6,13 @@ import uvicorn
 from fastapi import FastAPI
 
 from app.common.mongo import get_mongo_client
+from app.common.postgres import get_sql_engine
 from app.common.tracing import TraceIdMiddleware
 from app.config import config
 from app.document.router import router as document_router
 from app.example.router import router as example_router
 from app.health.router import router as health_router
+from app.ingest.vector_store import close_pool
 from app.knowledge_group.router import router as knowledge_group_router
 from app.rag.router import router as rag_router
 
@@ -43,8 +45,11 @@ async def lifespan(_: FastAPI):
     logger.info("MongoDB client connected")
     await ensure_knowledge_group_indexes(client)
     await ensure_document_indexes(client)
+    await get_sql_engine()
+    logger.info("Postgres engine ready")
     yield
     # Shutdown
+    await close_pool()
     if client:
         await client.close()
         logger.info("MongoDB client closed")
