@@ -9,10 +9,10 @@ logger = getLogger(__name__)
 _SEARCH_SQL = text("""
 SELECT content,
        source_id AS document_id,
-       1.0 - (embedding <=> :embedding::vector) AS similarity_score
+       1.0 - (embedding <=> CAST(:embedding AS vector)) AS similarity_score
 FROM knowledge_vectors
 WHERE metadata->>'knowledge_group_id' = ANY(:knowledge_group_ids)
-ORDER BY embedding <=> :embedding2::vector ASC
+ORDER BY embedding <=> CAST(:embedding2 AS vector) ASC
 LIMIT :max_results
 """)
 

@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 _INSERT_SQL = text("""
 INSERT INTO knowledge_vectors (content, embedding, snapshot_id, source_id, metadata)
-VALUES (:content, :embedding::vector, :snapshot_id, :source_id, :metadata::jsonb)
+VALUES (:content, CAST(:embedding AS vector), :snapshot_id, :source_id, CAST(:metadata AS jsonb))
 """)
 
 
