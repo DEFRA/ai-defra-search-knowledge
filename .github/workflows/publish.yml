@@ -28,6 +28,12 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Publish Liquibase Database Migrations
+        uses: DEFRA/cdp-build-action/publish-db-migrations@main
+        with:
+          path: ./changelog
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Test code and Create Test Coverage Reports
         uses: actions/setup-python@v5
         with:
