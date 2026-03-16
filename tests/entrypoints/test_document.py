@@ -52,6 +52,15 @@ def override_db(mock_db, mocker):
     app.dependency_overrides.pop(get_db, None)
 
 
+def test_get_supported_file_types():
+    client = TestClient(app)
+    response = client.get("/supported-file-types")
+    assert response.status_code == 200
+    data = response.json()
+    assert "extensions" in data
+    assert data["extensions"] == ["docx", "jsonl", "pdf", "pptx"]
+
+
 def test_create_documents_201(mock_db):
     client = TestClient(app)
     response = client.post(
