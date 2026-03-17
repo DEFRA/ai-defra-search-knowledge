@@ -6,6 +6,7 @@ from app.ingest.extractors import (
     PdfChunkExtractor,
     PptxChunkExtractor,
     get_extractor_for_file_name,
+    get_supported_extensions,
 )
 from app.ingest.extractors.chunking import chunk_text
 
@@ -33,6 +34,12 @@ def test_get_extractor_for_file_name_pptx():
 def test_get_extractor_for_file_name_unknown_defaults_to_jsonl():
     assert isinstance(get_extractor_for_file_name("file.txt"), JsonlChunkExtractor)
     assert isinstance(get_extractor_for_file_name("noext"), JsonlChunkExtractor)
+
+
+def test_get_supported_extensions():
+    exts = get_supported_extensions()
+    assert exts == ["docx", "jsonl", "pdf", "pptx"]
+    assert len(exts) == 4
 
 
 def test_pdf_extractor_extracts_and_chunks(mocker):

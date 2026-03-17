@@ -11,8 +11,17 @@ from app.common.mongo import get_db
 from app.config import config
 from app.document.models import Document, DocumentCreate
 from app.ingest import ingest_document
+from app.ingest.extractors import get_supported_extensions
 
 router = APIRouter()
+
+
+@router.get("/supported-file-types")
+async def get_supported_file_types() -> dict:
+    """Return file extensions accepted for document upload."""
+    return {"extensions": get_supported_extensions()}
+
+
 logger = getLogger(__name__)
 
 COLLECTION = "documents"
