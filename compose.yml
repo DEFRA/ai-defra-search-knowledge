@@ -32,6 +32,29 @@ services:
       - mongodb-data:/data
     restart: always
 
+  postgres:
+    build:
+      context: .
+      dockerfile: pgvector.Dockerfile
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 10s
+      start_period: 5s
+      retries: 3
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_HOST: ${AI_DEFRA_SEARCH_POSTGRES_HOST:-postgres}
+      POSTGRES_USER: ${AI_DEFRA_SEARCH_POSTGRES_USER:-postgres}
+      POSTGRES_PORT: ${AI_DEFRA_SEARCH_POSTGRES_PORT:-5432}
+      POSTGRES_PASSWORD: ${AI_DEFRA_SEARCH_POSTGRES_PASSWORD:-ppp}
+      POSTGRES_SSL_MODE: ${AI_DEFRA_SEARCH_POSTGRES_SSL_MODE:-disable}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    networks:
+      - cdp-tenant
+
   service:
     build:
       context: .
@@ -41,11 +64,14 @@ services:
     links:
       - "localstack:localstack"
       - "mongodb:mongodb"
+      - "postgres:postgres"
     depends_on:
       localstack:
         condition: service_healthy
       mongodb:
         condition: service_started
+      postgres:
+        condition: service_healthy
     profiles:
       - service
     env_file:
@@ -56,6 +82,12 @@ services:
       AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://localstack:4566}
       MONGO_URI: ${MONGO_URI:-mongodb://mongodb:27017/}
       HOST: ${HOST:-0.0.0.0}
+      POSTGRES_HOST: ${AI_DEFRA_SEARCH_POSTGRES_HOST:-postgres}
+      POSTGRES_USER: ${AI_DEFRA_SEARCH_POSTGRES_USER:-postgres}
+      POSTGRES_PORT: ${AI_DEFRA_SEARCH_POSTGRES_PORT:-5432}
+      POSTGRES_PASSWORD: ${AI_DEFRA_SEARCH_POSTGRES_PASSWORD:-ppp}
+      POSTGRES_SSL_MODE: ${AI_DEFRA_SEARCH_POSTGRES_SSL_MODE:-disable}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
     develop:
       watch:
         - action: sync
@@ -85,6 +117,7 @@ services:
 
 volumes:
   mongodb-data:
+  postgres-data:
 
 networks:
   cdp-tenant:

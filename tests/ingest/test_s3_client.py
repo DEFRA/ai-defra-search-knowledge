@@ -36,10 +36,18 @@ def test_fetch_object_from_s3_nosuchkey_raises(mocker):
 
 
 def test_get_s3_client_creates_client(mocker):
+    from botocore.config import Config
+
     mock_client = mocker.MagicMock()
-    mocker.patch("app.ingest.s3_client.boto3.client", return_value=mock_client)
+    mock_boto3_client = mocker.patch(
+        "app.ingest.s3_client.boto3.client", return_value=mock_client
+    )
+    mock_timeouts = mocker.MagicMock(aws_connect_timeout=5, aws_read_timeout=30)
     mocker.patch(
-        "app.ingest.s3_client.config", aws_region="eu-west-2", aws_endpoint_url=None
+        "app.ingest.s3_client.config",
+        aws_region="eu-west-2",
+        aws_endpoint_url=None,
+        timeouts=mock_timeouts,
     )
 
     # Reset module-level cache
@@ -49,6 +57,12 @@ def test_get_s3_client_creates_client(mocker):
 
     result = get_s3_client()
     assert result is mock_client
+
+    call_kwargs = mock_boto3_client.call_args[1]
+    assert call_kwargs["region_name"] == "eu-west-2"
+    assert isinstance(call_kwargs["config"], Config)
+    assert call_kwargs["config"].connect_timeout == 5
+    assert call_kwargs["config"].read_timeout == 30
 
 
 def test_fetch_jsonl_from_s3_exact_key(mocker):

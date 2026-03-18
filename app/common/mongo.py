@@ -17,6 +17,10 @@ db: AsyncDatabase | None = None
 async def get_mongo_client() -> AsyncMongoClient:
     global client
     if client is None:
+        timeout_kwargs = {
+            "connectTimeoutMS": config.timeouts.mongo_connect_timeout_ms,
+            "serverSelectionTimeoutMS": config.timeouts.mongo_server_selection_timeout_ms,
+        }
         # Use the custom CA Certs from env vars if set.
         # We can remove this once we migrate to mongo Atlas.
         cert = custom_ca_certs.get(config.mongo_truststore)
@@ -25,10 +29,12 @@ async def get_mongo_client() -> AsyncMongoClient:
                 "Creating MongoDB client with custom TLS cert %s",
                 config.mongo_truststore,
             )
-            client = AsyncMongoClient(config.mongo_uri, tlsCAFile=cert)
+            client = AsyncMongoClient(
+                config.mongo_uri, tlsCAFile=cert, **timeout_kwargs
+            )
         else:
             logger.info("Creating MongoDB client")
-            client = AsyncMongoClient(config.mongo_uri)
+            client = AsyncMongoClient(config.mongo_uri, **timeout_kwargs)
 
         logger.info("Testing MongoDB connection to %s", config.mongo_uri)
         await check_connection(client)

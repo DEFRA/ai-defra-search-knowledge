@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import boto3
+from botocore.config import Config
 from botocore.exceptions import ClientError
 
 from app.config import config
@@ -9,7 +12,13 @@ _s3_client: boto3.client | None = None
 def get_s3_client() -> boto3.client:
     global _s3_client
     if _s3_client is None:
-        kwargs: dict = {"region_name": config.aws_region}
+        kwargs: dict = {
+            "region_name": config.aws_region,
+            "config": Config(
+                connect_timeout=config.timeouts.aws_connect_timeout,
+                read_timeout=config.timeouts.aws_read_timeout,
+            ),
+        }
         if config.aws_endpoint_url:
             kwargs["endpoint_url"] = config.aws_endpoint_url
         _s3_client = boto3.client("s3", **kwargs)
