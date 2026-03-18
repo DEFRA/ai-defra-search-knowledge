@@ -2,6 +2,29 @@ from pydantic import Field, HttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+class TimeoutConfig(BaseSettings):
+    model_config = SettingsConfigDict()
+
+    # HTTP (httpx) timeouts – seconds
+    http_connect_timeout: int = Field(default=5, alias="HTTP_CONNECT_TIMEOUT")
+    http_read_timeout: int = Field(default=30, alias="HTTP_READ_TIMEOUT")
+
+    # MongoDB timeouts – milliseconds (PyMongo convention)
+    mongo_connect_timeout_ms: int = Field(
+        default=5000, alias="MONGO_CONNECT_TIMEOUT_MS"
+    )
+    mongo_server_selection_timeout_ms: int = Field(
+        default=5000, alias="MONGO_SERVER_SELECTION_TIMEOUT_MS"
+    )
+
+    # AWS (boto3 / botocore) timeouts – seconds
+    aws_connect_timeout: int = Field(default=5, alias="AWS_CONNECT_TIMEOUT")
+    aws_read_timeout: int = Field(default=30, alias="AWS_READ_TIMEOUT")
+
+    # PostgreSQL timeouts – seconds
+    postgres_connect_timeout: int = Field(default=5, alias="POSTGRES_CONNECT_TIMEOUT")
+
+
 class PostgresConfig(BaseSettings):
     model_config = SettingsConfigDict()
     host: str = Field(default="postgres", alias="POSTGRES_HOST")
@@ -40,6 +63,7 @@ class AppConfig(BaseSettings):
         default=None, alias="KNOWLEDGE_UPLOAD_BUCKET_NAME"
     )
     postgres: PostgresConfig = Field(default_factory=PostgresConfig)
+    timeouts: TimeoutConfig = Field(default_factory=TimeoutConfig)
     bedrock_embedding: BedrockEmbeddingConfig = Field(
         default_factory=BedrockEmbeddingConfig
     )

@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import json
 from abc import ABC, abstractmethod
 
 import boto3
+from botocore.config import Config
 
 from app.config import config
 
@@ -11,7 +14,13 @@ _bedrock_client: boto3.client | None = None
 def get_bedrock_client() -> boto3.client:
     global _bedrock_client
     if _bedrock_client is None:
-        kwargs: dict = {"region_name": config.aws_region}
+        kwargs: dict = {
+            "region_name": config.aws_region,
+            "config": Config(
+                connect_timeout=config.timeouts.aws_connect_timeout,
+                read_timeout=config.timeouts.aws_read_timeout,
+            ),
+        }
         if config.bedrock_endpoint_url:
             kwargs["endpoint_url"] = config.bedrock_endpoint_url
         _bedrock_client = boto3.client("bedrock-runtime", **kwargs)

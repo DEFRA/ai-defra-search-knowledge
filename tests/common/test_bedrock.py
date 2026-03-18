@@ -2,12 +2,18 @@ from app.common.bedrock import BedrockEmbeddingService, get_bedrock_client
 
 
 def test_get_bedrock_client(mocker):
+    from botocore.config import Config
+
     mock_client = mocker.MagicMock()
-    mocker.patch("app.common.bedrock.boto3.client", return_value=mock_client)
+    mock_boto3_client = mocker.patch(
+        "app.common.bedrock.boto3.client", return_value=mock_client
+    )
+    mock_timeouts = mocker.MagicMock(aws_connect_timeout=5, aws_read_timeout=30)
     mocker.patch(
         "app.common.bedrock.config",
         aws_region="eu-west-2",
         bedrock_endpoint_url=None,
+        timeouts=mock_timeouts,
     )
 
     import app.common.bedrock as bedrock_module
@@ -16,6 +22,12 @@ def test_get_bedrock_client(mocker):
 
     result = get_bedrock_client()
     assert result is mock_client
+
+    call_kwargs = mock_boto3_client.call_args[1]
+    assert call_kwargs["region_name"] == "eu-west-2"
+    assert isinstance(call_kwargs["config"], Config)
+    assert call_kwargs["config"].connect_timeout == 5
+    assert call_kwargs["config"].read_timeout == 30
 
 
 def test_bedrock_embedding_service_generate_embeddings(mocker):

@@ -59,6 +59,7 @@ async def get_sql_engine() -> sqlalchemy.ext.asyncio.AsyncEngine:
             connect_args={
                 "sslmode": config.postgres.ssl_mode,
                 "sslrootcert": cert,
+                "connect_timeout": config.timeouts.postgres_connect_timeout,
             },
             hide_parameters=config.python_env != "development",
         )
@@ -66,7 +67,10 @@ async def get_sql_engine() -> sqlalchemy.ext.asyncio.AsyncEngine:
         logger.info("Creating Postgres SQLAlchemy engine without custom TLS cert")
         engine = sqlalchemy.ext.asyncio.create_async_engine(
             url,
-            connect_args={"sslmode": config.postgres.ssl_mode},
+            connect_args={
+                "sslmode": config.postgres.ssl_mode,
+                "connect_timeout": config.timeouts.postgres_connect_timeout,
+            },
             hide_parameters=config.python_env != "development",
         )
 
@@ -80,7 +84,7 @@ async def get_sql_engine() -> sqlalchemy.ext.asyncio.AsyncEngine:
 
 async def check_connection(eng: sqlalchemy.ext.asyncio.AsyncEngine) -> bool:
     async with eng.connect() as connection:
-        await connection.execute(sqlalchemy.text("SELECT 1 FROM knowledge_vectors"))
+        await connection.execute(sqlalchemy.text("SELECT 1"))
     return True
 
 

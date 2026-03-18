@@ -7,6 +7,7 @@ from app.common.postgres import (
     get_sql_engine,
     get_token,
 )
+from app.config import config
 
 
 @pytest.fixture(autouse=True)
@@ -18,8 +19,6 @@ def reset_engine():
 
 class TestGetToken:
     def test_development_uses_password(self, monkeypatch):
-        from app.config import config
-
         expected = "dev-secret"
         monkeypatch.setattr(config, "python_env", "development")
         monkeypatch.setattr(config.postgres, "password", expected)
@@ -30,8 +29,6 @@ class TestGetToken:
         assert cparams["password"] == expected
 
     def test_non_development_uses_rds_auth_token(self, monkeypatch, mocker):
-        from app.config import config
-
         monkeypatch.setattr(config, "python_env", "production")
         monkeypatch.setattr(config, "aws_region", "eu-west-2")
         monkeypatch.setattr(config.postgres, "host", "db.example.com")
@@ -59,8 +56,6 @@ class TestGetToken:
 class TestGetSqlEngine:
     @pytest.mark.asyncio
     async def test_returns_cached_engine(self, mocker, monkeypatch):
-        from app.config import config
-
         monkeypatch.setattr(config.postgres, "rds_truststore", None)
         mock_engine = mocker.MagicMock()
         postgres_module.engine = mock_engine
@@ -71,8 +66,6 @@ class TestGetSqlEngine:
 
     @pytest.mark.asyncio
     async def test_creates_engine_without_cert(self, mocker, monkeypatch):
-        from app.config import config
-
         monkeypatch.setattr(config.postgres, "rds_truststore", None)
         monkeypatch.setattr(config.postgres, "ssl_mode", "require")
         monkeypatch.setattr(config, "python_env", "development")
@@ -98,7 +91,10 @@ class TestGetSqlEngine:
         assert result is mock_engine
         mock_create.assert_called_once()
         call_kw = mock_create.call_args[1]
-        assert call_kw["connect_args"] == {"sslmode": "require"}
+        assert call_kw["connect_args"] == {
+            "sslmode": "require",
+            "connect_timeout": config.timeouts.postgres_connect_timeout,
+        }
         mock_listen.assert_called_once_with(
             mock_engine.sync_engine, "do_connect", get_token
         )
@@ -106,7 +102,6 @@ class TestGetSqlEngine:
     @pytest.mark.asyncio
     async def test_creates_engine_with_cert(self, mocker, monkeypatch):
         from app.common import tls
-        from app.config import config
 
         monkeypatch.setattr(config.postgres, "rds_truststore", "TRUSTSTORE_RDS_ROOT_CA")
         monkeypatch.setattr(config.postgres, "ssl_mode", "verify-full")
@@ -139,6 +134,7 @@ class TestGetSqlEngine:
         assert call_kw["connect_args"] == {
             "sslmode": "verify-full",
             "sslrootcert": "/path/to/ca.pem",
+            "connect_timeout": config.timeouts.postgres_connect_timeout,
         }
 
 
