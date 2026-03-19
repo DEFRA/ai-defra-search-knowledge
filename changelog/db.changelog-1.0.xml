@@ -5,7 +5,7 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
-    <!-- Schema copied from ai-defra-search-data. Idempotent so it works standalone or when data migrator ran first. -->
+    <!-- Schema copied from ai-defra-search-knowledge. Idempotent so it works standalone or when data migrator ran first. -->
     <changeSet author="DEFRA" id="knowledge-1.0.0-vector-extension">
         <sql>CREATE EXTENSION IF NOT EXISTS vector</sql>
         <rollback>DROP EXTENSION IF EXISTS vector</rollback>
