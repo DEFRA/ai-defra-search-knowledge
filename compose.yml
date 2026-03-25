@@ -79,7 +79,8 @@ services:
       - "compose/secrets.env"
     environment:
       PORT: ${PORT:-8085}
-      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://localstack:4566}
+      LOCALSTACK_S3_ENDPOINT_URL: ${LOCALSTACK_S3_ENDPOINT_URL:-${AWS_ENDPOINT_URL:-http://localstack:4566}}
+      AWS_ENDPOINT_URL: ""
       MONGO_URI: ${MONGO_URI:-mongodb://mongodb:27017/}
       HOST: ${HOST:-0.0.0.0}
       POSTGRES_HOST: ${AI_DEFRA_SEARCH_POSTGRES_HOST:-postgres}

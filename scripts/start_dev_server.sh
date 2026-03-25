@@ -21,7 +21,7 @@ sleep 5
 
 # Set environment variables for local development
 export PORT=8085
-export AWS_ENDPOINT_URL=http://localhost:4566
+export LOCALSTACK_S3_ENDPOINT_URL=http://localhost:4566
 export MONGO_URI=mongodb://localhost:27017/
 export ENV=dev
 export HOST=0.0.0.0
