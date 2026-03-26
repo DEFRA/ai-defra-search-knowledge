@@ -29,7 +29,14 @@ async def db_query(db: Annotated[AsyncDatabase, Depends(get_db)]):
 
 
 # http client endpoint example
-@router.get("/http")
+@router.get(
+    "/http",
+    responses={
+        503: {
+            "description": "LOCALSTACK_S3_ENDPOINT_URL is not set; required for this example"
+        }
+    },
+)
 async def http_query(
     client: Annotated[httpx.AsyncClient, Depends(create_async_client)],
 ):

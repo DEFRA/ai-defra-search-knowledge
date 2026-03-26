@@ -32,6 +32,15 @@ def test_db_query_success(mocker):
         app.dependency_overrides = {}
 
 
+def test_http_query_requires_localstack_url(mocker):
+    mocker.patch.object(example_router.config, "localstack_s3_endpoint_url", None)
+
+    response = client.get("/example/http")
+
+    assert response.status_code == 503
+    assert response.json()["detail"].startswith("LOCALSTACK_S3_ENDPOINT_URL")
+
+
 def test_http_query_success(mocker):
     mocker.patch.object(
         example_router.config,
