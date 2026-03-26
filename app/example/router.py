@@ -33,6 +33,6 @@ async def db_query(db: Annotated[AsyncDatabase, Depends(get_db)]):
 async def http_query(
     client: Annotated[httpx.AsyncClient, Depends(create_async_client)],
 ):
-    endpoint = config.localstack_s3_endpoint_url or "http://localstack:4566"
+    endpoint = config.localstack_s3_endpoint_url or "http://localstack:4566"  # noqa: S105
     resp = await client.get(f"{endpoint}/health")
     return {"ok": resp.status_code}
