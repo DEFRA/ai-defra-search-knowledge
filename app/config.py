@@ -69,6 +69,7 @@ class AppConfig(BaseSettings):
     http_proxy: HttpUrl | None = None
     enable_metrics: bool = False
     tracing_header: str = "x-cdp-request-id"
+    api_key: str = Field(default="", alias="AI_DEFRA_SEARCH_KNOWLEDGE_API_KEY")
     knowledge_upload_bucket: str | None = Field(
         default=None, alias="KNOWLEDGE_UPLOAD_BUCKET_NAME"
     )

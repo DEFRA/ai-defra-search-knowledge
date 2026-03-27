@@ -54,7 +54,7 @@ def override_db(mock_db, mocker):
 
 def test_get_supported_file_types():
     client = TestClient(app)
-    response = client.get("/supported-file-types")
+    response = client.get("/supported-file-types", headers={"X-API-KEY": "test-key"})
     assert response.status_code == 200
     data = response.json()
     assert "extensions" in data
@@ -79,6 +79,7 @@ def test_create_documents_201(mock_db):
                 "s3_key": "uploads/kg-1/doc2",
             },
         ],
+        headers={"X-API-KEY": "test-key"},
     )
     assert response.status_code == 201
     mock_db._docs_collection.insert_many.assert_called_once()
@@ -94,7 +95,7 @@ def test_create_documents_201(mock_db):
 
 def test_create_documents_empty_list(mock_db):
     client = TestClient(app)
-    response = client.post("/documents", json=[])
+    response = client.post("/documents", json=[], headers={"X-API-KEY": "test-key"})
     assert response.status_code == 201
     mock_db._docs_collection.insert_many.assert_not_called()
 
@@ -123,6 +124,7 @@ def test_create_documents_triggers_async_ingest(mocker):
                 "s3_key": "uploads/kg-1/doc1",
             },
         ],
+        headers={"X-API-KEY": "test-key"},
     )
     assert response.status_code == 201
     assert len(create_task_calls) == 1
@@ -151,6 +153,7 @@ def test_create_documents_rejects_missing_s3_key(mock_db):
                 "cdp_upload_id": "upload-1",
             },
         ],
+        headers={"X-API-KEY": "test-key"},
     )
     assert response.status_code == 422
     mock_db._docs_collection.insert_many.assert_not_called()
@@ -191,7 +194,9 @@ def test_run_ingest_for_document_logs_on_exception(mocker):
 
 def test_get_upload_status_empty(mock_db):
     client = TestClient(app)
-    response = client.get("/upload-status/upload-123")
+    response = client.get(
+        "/upload-status/upload-123", headers={"X-API-KEY": "test-key"}
+    )
     assert response.status_code == 200
     assert response.json() == []
     mock_db._docs_collection.find.assert_called_once_with(
@@ -214,7 +219,7 @@ def test_list_documents_by_knowledge_group_empty(mock_db, mocker):
     client = TestClient(app)
     response = client.get(
         "/documents?knowledge_group_id=507f1f77bcf86cd799439011",
-        headers={"user-id": "user-1"},
+        headers={"user-id": "user-1", "X-API-KEY": "test-key"},
     )
     assert response.status_code == 404
 
@@ -236,7 +241,7 @@ def test_list_documents_by_knowledge_group_forbidden(mock_db, mocker):
     client = TestClient(app)
     response = client.get(
         "/documents?knowledge_group_id=507f1f77bcf86cd799439011",
-        headers={"user-id": "user-1"},
+        headers={"user-id": "user-1", "X-API-KEY": "test-key"},
     )
     assert response.status_code == 404
 
@@ -272,7 +277,7 @@ def test_list_documents_by_knowledge_group_success(mock_db, mocker):
     client = TestClient(app)
     response = client.get(
         "/documents?knowledge_group_id=507f1f77bcf86cd799439011",
-        headers={"user-id": "user-1"},
+        headers={"user-id": "user-1", "X-API-KEY": "test-key"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -297,7 +302,9 @@ def test_get_upload_status_with_docs(mock_db, mocker):
     mock_db._docs_collection.find = mocker.MagicMock(return_value=cursor_with_doc())
 
     client = TestClient(app)
-    response = client.get("/upload-status/upload-456")
+    response = client.get(
+        "/upload-status/upload-456", headers={"X-API-KEY": "test-key"}
+    )
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -343,6 +350,7 @@ def test_run_ingest_updates_document_status(mock_db, mocker):
                 "s3_key": "uploads/kg-1/doc1",
             },
         ],
+        headers={"X-API-KEY": "test-key"},
     )
     assert response.status_code == 201
     assert len(create_task_calls) == 1
@@ -393,6 +401,7 @@ def test_run_ingest_sets_failed_on_exception(mock_db, mocker):
                 "s3_key": "uploads/kg-1/doc1",
             },
         ],
+        headers={"X-API-KEY": "test-key"},
     )
     assert response.status_code == 201
     asyncio.run(create_task_calls[0])
@@ -400,3 +409,27 @@ def test_run_ingest_sets_failed_on_exception(mock_db, mocker):
     assert mock_db._docs_collection.update_one.call_count == 2
     failed_call = mock_db._docs_collection.update_one.call_args_list[1]
     assert failed_call[0][1]["$set"]["status"] == "failed"
+
+
+def test_no_api_key_returns_401():
+    client = TestClient(app)
+    response = client.get("/supported-file-types")
+    assert response.status_code == 401
+
+
+def test_wrong_api_key_returns_403():
+    client = TestClient(app)
+    response = client.get("/supported-file-types", headers={"X-API-KEY": "wrong-key"})
+    assert response.status_code == 403
+
+
+def test_no_api_key_on_post_returns_401():
+    client = TestClient(app)
+    response = client.post("/documents", json=[])
+    assert response.status_code == 401
+
+
+def test_wrong_api_key_on_post_returns_403():
+    client = TestClient(app)
+    response = client.post("/documents", json=[], headers={"X-API-KEY": "wrong-key"})
+    assert response.status_code == 403

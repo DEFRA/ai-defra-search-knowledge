@@ -132,7 +132,7 @@ def test_search_returns_ranked_results(mocker):
             "query": "flood risk",
             "max_results": 3,
         },
-        headers={"user-id": USER_ID},
+        headers={"user-id": USER_ID, "X-API-KEY": "test-key"},
     )
 
     assert response.status_code == 200
@@ -158,7 +158,7 @@ def test_search_returns_empty_list_when_no_vectors_exist(mocker):
     response = TestClient(app).post(
         "/rag/search",
         json={"knowledge_group_ids": [GROUP_ID_A], "query": "air quality"},
-        headers={"user-id": USER_ID},
+        headers={"user-id": USER_ID, "X-API-KEY": "test-key"},
     )
 
     assert response.status_code == 200
@@ -175,16 +175,19 @@ def test_search_returns_empty_list_when_no_vectors_exist(mocker):
     [
         (
             {"knowledge_group_ids": [GROUP_ID_A], "query": "flood"},
-            {},
+            {"X-API-KEY": "test-key"},
         ),  # missing user-id header
-        ({"query": "flood"}, {"user-id": USER_ID}),  # missing knowledge_group_ids
+        (
+            {"query": "flood"},
+            {"user-id": USER_ID, "X-API-KEY": "test-key"},
+        ),  # missing knowledge_group_ids
         (
             {"knowledge_group_ids": [GROUP_ID_A], "query": ""},
-            {"user-id": USER_ID},
+            {"user-id": USER_ID, "X-API-KEY": "test-key"},
         ),  # empty query
         (
             {"knowledge_group_ids": [GROUP_ID_A], "query": "flood", "max_results": 0},
-            {"user-id": USER_ID},
+            {"user-id": USER_ID, "X-API-KEY": "test-key"},
         ),  # invalid max_results
     ],
 )
@@ -204,7 +207,7 @@ def test_search_group_not_found(mock_db, mocker):
     response = TestClient(app).post(
         "/rag/search",
         json={"knowledge_group_ids": [GROUP_ID_A], "query": "flood risk"},
-        headers={"user-id": USER_ID},
+        headers={"user-id": USER_ID, "X-API-KEY": "test-key"},
     )
 
     assert response.status_code == 404
@@ -217,7 +220,7 @@ def test_search_group_belongs_to_different_user(mock_db, mocker):
     response = TestClient(app).post(
         "/rag/search",
         json={"knowledge_group_ids": [GROUP_ID_A], "query": "flood risk"},
-        headers={"user-id": "other-user"},
+        headers={"user-id": "other-user", "X-API-KEY": "test-key"},
     )
 
     assert response.status_code == 404
@@ -239,7 +242,7 @@ def test_search_bedrock_failure(mocker):
     response = TestClient(app).post(
         "/rag/search",
         json={"knowledge_group_ids": [GROUP_ID_A], "query": "flood risk"},
-        headers={"user-id": USER_ID},
+        headers={"user-id": USER_ID, "X-API-KEY": "test-key"},
     )
 
     assert response.status_code == 502
@@ -260,7 +263,7 @@ def test_search_postgres_failure(mocker):
     response = TestClient(app).post(
         "/rag/search",
         json={"knowledge_group_ids": [GROUP_ID_A], "query": "flood risk"},
-        headers={"user-id": USER_ID},
+        headers={"user-id": USER_ID, "X-API-KEY": "test-key"},
     )
 
     assert response.status_code == 502
@@ -288,7 +291,7 @@ def test_search_returns_file_name_and_s3_key_when_documents_exist(mock_db, mocke
     response = TestClient(app).post(
         "/rag/search",
         json={"knowledge_group_ids": [GROUP_ID_A], "query": "flood risk"},
-        headers={"user-id": USER_ID},
+        headers={"user-id": USER_ID, "X-API-KEY": "test-key"},
     )
 
     assert response.status_code == 200
@@ -325,7 +328,7 @@ def test_search_returns_empty_strings_for_result_with_no_matching_document(
     response = TestClient(app).post(
         "/rag/search",
         json={"knowledge_group_ids": [GROUP_ID_A], "query": "flood risk"},
-        headers={"user-id": USER_ID},
+        headers={"user-id": USER_ID, "X-API-KEY": "test-key"},
     )
 
     assert response.status_code == 200
@@ -354,7 +357,7 @@ def test_search_returns_empty_strings_when_no_documents_found_in_mongo(mock_db, 
     response = TestClient(app).post(
         "/rag/search",
         json={"knowledge_group_ids": [GROUP_ID_A], "query": "flood risk"},
-        headers={"user-id": USER_ID},
+        headers={"user-id": USER_ID, "X-API-KEY": "test-key"},
     )
 
     assert response.status_code == 200
@@ -379,9 +382,27 @@ def test_search_skips_mongo_lookup_when_vector_search_returns_no_results(
     response = TestClient(app).post(
         "/rag/search",
         json={"knowledge_group_ids": [GROUP_ID_A], "query": "flood risk"},
-        headers={"user-id": USER_ID},
+        headers={"user-id": USER_ID, "X-API-KEY": "test-key"},
     )
 
     assert response.status_code == 200
     assert response.json() == []
     mock_db["documents"].find.assert_not_called()
+
+
+def test_no_api_key_returns_401():
+    response = TestClient(app).post(
+        "/rag/search",
+        json={"knowledge_group_ids": [GROUP_ID_A], "query": "flood risk"},
+        headers={"user-id": USER_ID},
+    )
+    assert response.status_code == 401
+
+
+def test_wrong_api_key_returns_403():
+    response = TestClient(app).post(
+        "/rag/search",
+        json={"knowledge_group_ids": [GROUP_ID_A], "query": "flood risk"},
+        headers={"user-id": USER_ID, "X-API-KEY": "wrong-key"},
+    )
+    assert response.status_code == 403
