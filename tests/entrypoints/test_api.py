@@ -1,5 +1,6 @@
 import os
 
+import pytest
 from fastapi.testclient import TestClient
 
 import app.main as main_mod
@@ -28,6 +29,19 @@ def test_lifespan(mocker):
         pass
 
     mock_mongo_client.close.assert_awaited_once()
+
+
+def test_lifespan_raises_when_api_key_missing(monkeypatch):
+    monkeypatch.setattr(main_mod.config, "api_key", None)
+
+    with (
+        pytest.raises(
+            RuntimeError,
+            match="AI_DEFRA_SEARCH_KNOWLEDGE_API_KEY environment variable is not set",
+        ),
+        TestClient(app, raise_server_exceptions=True),
+    ):
+        pass
 
 
 def test_example():
