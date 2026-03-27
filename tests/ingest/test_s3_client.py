@@ -7,6 +7,10 @@ from app.ingest.s3_client import (
     list_jsonl_keys,
 )
 
+# LocalStack default dummy credentials (same as compose defaults; not real secrets).
+_LOCALSTACK_TEST_ACCESS_KEY = "ak"  # noqa: S105
+_LOCALSTACK_TEST_SECRET_KEY = "sk"  # noqa: S105
+
 
 def test_fetch_object_from_s3(mocker):
     mock_body = mocker.MagicMock()
@@ -46,7 +50,7 @@ def test_get_s3_client_creates_client(mocker):
     mocker.patch(
         "app.ingest.s3_client.config",
         aws_region="eu-west-2",
-        aws_endpoint_url=None,
+        localstack_s3_endpoint_url=None,
         timeouts=mock_timeouts,
     )
 
@@ -63,6 +67,37 @@ def test_get_s3_client_creates_client(mocker):
     assert isinstance(call_kwargs["config"], Config)
     assert call_kwargs["config"].connect_timeout == 5
     assert call_kwargs["config"].read_timeout == 30
+    assert "endpoint_url" not in call_kwargs
+    assert "aws_access_key_id" not in call_kwargs
+
+
+def test_get_s3_client_with_endpoint_passes_localstack_keys(mocker):
+    mock_client = mocker.MagicMock()
+    mock_boto3_client = mocker.patch(
+        "app.ingest.s3_client.boto3.client", return_value=mock_client
+    )
+    mock_timeouts = mocker.MagicMock(aws_connect_timeout=5, aws_read_timeout=30)
+    mocker.patch(
+        "app.ingest.s3_client.config",
+        aws_region="eu-west-2",
+        localstack_s3_endpoint_url="http://localstack:4566",
+        localstack_access_key=_LOCALSTACK_TEST_ACCESS_KEY,
+        localstack_secret_access_key=_LOCALSTACK_TEST_SECRET_KEY,
+        timeouts=mock_timeouts,
+    )
+
+    import app.ingest.s3_client as s3_module
+
+    s3_module._s3_client = None
+
+    result = get_s3_client()
+    assert result is mock_client
+
+    call_kwargs = mock_boto3_client.call_args[1]
+    assert call_kwargs["region_name"] == "eu-west-2"
+    assert call_kwargs["endpoint_url"] == "http://localstack:4566"
+    assert call_kwargs["aws_access_key_id"] == _LOCALSTACK_TEST_ACCESS_KEY
+    assert call_kwargs["aws_secret_access_key"] == _LOCALSTACK_TEST_SECRET_KEY
 
 
 def test_fetch_jsonl_from_s3_exact_key(mocker):

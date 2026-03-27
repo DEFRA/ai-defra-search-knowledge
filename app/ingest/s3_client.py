@@ -19,8 +19,12 @@ def get_s3_client() -> boto3.client:
                 read_timeout=config.timeouts.aws_read_timeout,
             ),
         }
-        if config.aws_endpoint_url:
-            kwargs["endpoint_url"] = config.aws_endpoint_url
+        if config.localstack_s3_endpoint_url:
+            kwargs["endpoint_url"] = config.localstack_s3_endpoint_url
+            kwargs["aws_access_key_id"] = config.localstack_access_key or "test"
+            kwargs["aws_secret_access_key"] = (
+                config.localstack_secret_access_key or "test"
+            )
         _s3_client = boto3.client("s3", **kwargs)
     return _s3_client
 

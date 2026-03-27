@@ -54,7 +54,17 @@ class AppConfig(BaseSettings):
     mongo_database: str = "ai-defra-search-knowledge"
     mongo_truststore: str = "TRUSTSTORE_CDP_ROOT_CA"
     aws_region: str = Field(default="eu-west-2", alias="AWS_REGION")
-    aws_endpoint_url: str | None = Field(default=None, alias="AWS_ENDPOINT_URL")
+    # S3-only (LocalStack). Do not use AWS_ENDPOINT_URL — botocore applies it globally and
+    # would route bedrock-runtime to LocalStack, breaking real Bedrock + bearer auth.
+    localstack_s3_endpoint_url: str | None = Field(
+        default=None, alias="LOCALSTACK_S3_ENDPOINT_URL"
+    )
+    localstack_access_key: str | None = Field(
+        default=None, alias="LOCALSTACK_ACCESS_KEY"
+    )
+    localstack_secret_access_key: str | None = Field(
+        default=None, alias="LOCALSTACK_SECRET_ACCESS_KEY"
+    )
     bedrock_endpoint_url: str | None = Field(default=None, alias="BEDROCK_ENDPOINT_URL")
     http_proxy: HttpUrl | None = None
     enable_metrics: bool = False
