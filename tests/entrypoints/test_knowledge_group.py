@@ -126,11 +126,6 @@ def test_list_knowledge_groups_missing_user_id():
     assert response.status_code == 422
 
 
-# ---------------------------------------------------------------------------
-# API key protection
-# ---------------------------------------------------------------------------
-
-
 def test_no_api_key_returns_401():
     client = TestClient(app)
     response = client.post(

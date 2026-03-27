@@ -411,11 +411,6 @@ def test_run_ingest_sets_failed_on_exception(mock_db, mocker):
     assert failed_call[0][1]["$set"]["status"] == "failed"
 
 
-# ---------------------------------------------------------------------------
-# API key protection
-# ---------------------------------------------------------------------------
-
-
 def test_no_api_key_returns_401():
     client = TestClient(app)
     response = client.get("/supported-file-types")

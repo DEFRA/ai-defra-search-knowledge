@@ -390,11 +390,6 @@ def test_search_skips_mongo_lookup_when_vector_search_returns_no_results(
     mock_db["documents"].find.assert_not_called()
 
 
-# ---------------------------------------------------------------------------
-# API key protection
-# ---------------------------------------------------------------------------
-
-
 def test_no_api_key_returns_401():
     response = TestClient(app).post(
         "/rag/search",
