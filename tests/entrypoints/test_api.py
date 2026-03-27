@@ -42,6 +42,19 @@ def test_health():
     assert response.json() == {"status": "ok"}
 
 
+def test_protected_route_no_key():
+    response = client.get("/knowledge-groups", headers={"user-id": "user-1"})
+    assert response.status_code == 401
+
+
+def test_protected_route_wrong_key():
+    response = client.get(
+        "/knowledge-groups",
+        headers={"user-id": "user-1", "X-API-KEY": "wrong-key"},
+    )
+    assert response.status_code == 403
+
+
 def test_root():
     response = client.get("/")
     assert response.status_code == 404

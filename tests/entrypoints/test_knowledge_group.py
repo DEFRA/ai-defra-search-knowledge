@@ -45,7 +45,7 @@ def test_create_knowledge_group():
     response = client.post(
         "/knowledge-group",
         json={"name": "My Group"},
-        headers={"user-id": "user-123"},
+        headers={"user-id": "user-123", "X-API-KEY": "test-key"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -59,7 +59,7 @@ def test_create_knowledge_group_with_description():
     response = client.post(
         "/knowledge-group",
         json={"name": "My Group", "description": "Test desc"},
-        headers={"user-id": "user-456"},
+        headers={"user-id": "user-456", "X-API-KEY": "test-key"},
     )
     assert response.status_code == 200
     assert response.json()["name"] == "My Group"
@@ -76,7 +76,7 @@ def test_create_knowledge_group_with_information_asset_owner():
             "description": "Test desc",
             "information_asset_owner": "Jane Smith",
         },
-        headers={"user-id": "user-789"},
+        headers={"user-id": "user-789", "X-API-KEY": "test-key"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -91,6 +91,7 @@ def test_create_knowledge_group_missing_user_id():
     response = client.post(
         "/knowledge-group",
         json={"name": "Test"},
+        headers={"X-API-KEY": "test-key"},
     )
     assert response.status_code == 422
 
@@ -103,7 +104,7 @@ def test_create_knowledge_group_duplicate_name(mock_db, mocker):
     response = client.post(
         "/knowledge-group",
         json={"name": "My Group"},
-        headers={"user-id": "user-123"},
+        headers={"user-id": "user-123", "X-API-KEY": "test-key"},
     )
     assert response.status_code == 409
     assert "already exists" in response.json()["detail"]
@@ -111,7 +112,9 @@ def test_create_knowledge_group_duplicate_name(mock_db, mocker):
 
 def test_list_knowledge_groups(mock_db):
     client = TestClient(app)
-    response = client.get("/knowledge-groups", headers={"user-id": "user-123"})
+    response = client.get(
+        "/knowledge-groups", headers={"user-id": "user-123", "X-API-KEY": "test-key"}
+    )
     assert response.status_code == 200
     assert response.json() == []
     mock_db["knowledgeGroups"].find.assert_called_once_with({"created_by": "user-123"})
@@ -119,5 +122,30 @@ def test_list_knowledge_groups(mock_db):
 
 def test_list_knowledge_groups_missing_user_id():
     client = TestClient(app)
-    response = client.get("/knowledge-groups")
+    response = client.get("/knowledge-groups", headers={"X-API-KEY": "test-key"})
     assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# API key protection
+# ---------------------------------------------------------------------------
+
+
+def test_no_api_key_returns_401():
+    client = TestClient(app)
+    response = client.post(
+        "/knowledge-group",
+        json={"name": "My Group"},
+        headers={"user-id": "user-123"},
+    )
+    assert response.status_code == 401
+
+
+def test_wrong_api_key_returns_403():
+    client = TestClient(app)
+    response = client.post(
+        "/knowledge-group",
+        json={"name": "My Group"},
+        headers={"user-id": "user-123", "X-API-KEY": "wrong-key"},
+    )
+    assert response.status_code == 403

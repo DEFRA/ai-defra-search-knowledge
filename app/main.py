@@ -3,10 +3,11 @@ from contextlib import asynccontextmanager
 from logging import getLogger
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 
 from app.common.mongo import get_mongo_client
 from app.common.postgres import get_sql_engine
+from app.common.security import verify_api_key
 from app.common.tracing import TraceIdMiddleware
 from app.config import config
 from app.document.router import router as document_router
@@ -41,6 +42,9 @@ async def ensure_document_indexes(client):
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     # Startup
+    if not config.api_key:
+        msg = "AI_DEFRA_SEARCH_KNOWLEDGE_API_KEY environment variable is not set"
+        raise RuntimeError(msg)
     client = await get_mongo_client()
     logger.info("MongoDB client connected")
     await ensure_knowledge_group_indexes(client)
@@ -63,9 +67,9 @@ app.add_middleware(TraceIdMiddleware)
 # Setup Routes
 app.include_router(health_router)
 app.include_router(example_router)
-app.include_router(knowledge_group_router)
-app.include_router(document_router)
-app.include_router(rag_router)
+app.include_router(knowledge_group_router, dependencies=[Depends(verify_api_key)])
+app.include_router(document_router, dependencies=[Depends(verify_api_key)])
+app.include_router(rag_router, dependencies=[Depends(verify_api_key)])
 
 
 def main() -> None:  # pragma: no cover
