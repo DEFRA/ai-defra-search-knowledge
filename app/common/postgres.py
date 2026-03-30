@@ -93,6 +93,8 @@ async def get_sql_engine() -> sqlalchemy.ext.asyncio.AsyncEngine:
     logger.info("Testing Postgres SQLAlchemy connection to %s", config.postgres.host)
     await check_connection(engine)
 
+    await _seed_postgres(engine)
+
     return engine
 
 
