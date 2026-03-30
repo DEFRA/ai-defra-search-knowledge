@@ -1,4 +1,5 @@
 import logging
+import pathlib
 
 import boto3
 import sqlalchemy
@@ -10,7 +11,20 @@ from app.config import config
 
 logger = logging.getLogger(__name__)
 
+_SEED_SQL = pathlib.Path(__file__).parent / "seed_data" / "knowledge_vectors.sql"
+
 engine: sqlalchemy.ext.asyncio.AsyncEngine | None = None
+
+
+async def _seed_postgres(engine: sqlalchemy.ext.asyncio.AsyncEngine) -> None:
+    """Seed the postgres database with development data on startup."""
+    logger.info("Seeding Postgres database with development data")
+    sql = _SEED_SQL.read_text()
+
+    async with engine.begin() as connection:
+        await connection.execute(sqlalchemy.text(sql))
+
+    logger.info("Postgres database seeded successfully")
 
 
 def get_token(dialect, conn_rec, cargs, cparams):  # noqa: ARG001
